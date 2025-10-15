@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Gerenciar Bolsistas</title>
+    <style>
+        body { font-family: sans-serif; margin: 2em; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        button { padding: 5px 10px; cursor: pointer; }
+        .add { background-color: #5cb85c; color: white; border: none; }
+        .remove { background-color: #d9534f; color: white; border: none; }
+    </style>
+</head>
+<body>
+    <h1>Gerenciamento de Bolsistas</h1>
+    <p>Bem-vindo, {{ user.get_full_name }}.</p>
+    <p><a href="{% url 'home' %}">Voltar para a página inicial</a></p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Aluno</th>
+                <th>Email</th>
+                <th>Ação</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for aluno in todos_os_alunos %}
+            <tr>
+                <td>{{ aluno.get_full_name }}</td>
+                <td>{{ aluno.email }}</td>
+                <td>
+                    <form method="post" action="{% url 'gerenciar_bolsistas' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="student_id" value="{{ aluno.id }}">
+
+                        {% if aluno in bolsistas_gerenciados %}
+                            <input type="hidden" name="action" value="remove">
+                            <button type="submit" class="remove">Remover</button>
+                        {% else %}
+                            <input type="hidden" name="action" value="add">
+                            <button type="submit" class="add">Adicionar</button>
+                        {% endif %}
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3">Nenhum aluno encontrado no sistema.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</body>
+</html>
