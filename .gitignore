@@ -1,0 +1,34 @@
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Byte-compiled / optimized / compressed files
+*.pyc
+__pycache__/
+
+# Database
+db.sqlite3
+
+# Arquivos de credenciais
+.env
+
+# Media files (if not intended for version control)
+media/
+
+# Local settings (containing sensitive information)
+local_settings.py
+
+# IDE-specific files
+.idea/
+.vscode/
+
+# Banco de dados local
+db.sqlite3
+*.sqlite3
+
+# Node modules (if using frontend build tools)
+node_modules/
+
+# Outros
+.DS_Store
