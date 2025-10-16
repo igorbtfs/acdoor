@@ -30,7 +30,7 @@ SECRET_KEY = 'REMOVIDA-DO-HISTORICO'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['192.168.1.2', "esp32", "127.0.0.0", "localhost"]
 
 # Application definition
 

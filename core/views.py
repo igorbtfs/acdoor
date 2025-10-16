@@ -144,31 +144,37 @@ def edit_aluno(request, student_id):
     aluno = get_object_or_404(User, id=student_id)
 
     if request.method == 'POST':
-        # Passa os dados do request E a instância original para o formulário
         form = EditAlunoForm(request.POST, instance=aluno)
         if form.is_valid():
             cd = form.cleaned_data
 
-            # Atualiza os dados do objeto User
+            # Atualiza os dados do User
             aluno.first_name = cd['first_name']
             aluno.last_name = cd['last_name']
             aluno.email = cd['email']
             aluno.save()
 
-            # Atualiza os dados do AlunoProfile, criando se não existir
+            # Atualiza ou cria o AlunoProfile
             profile, created = AlunoProfile.objects.get_or_create(user=aluno)
             profile.curso = cd['curso']
+            # --- LINHA MODIFICADA PARA SALVAR O TOKEN ---
+            profile.rfid_token = cd['rfid_token']
+            # --- FIM DA MODIFICAÇÃO ---
             profile.save()
 
             messages.success(request, f"Dados de {aluno.get_full_name()} atualizados com sucesso!")
             return redirect('gerenciar_bolsistas')
     else:
-        # Preenche o formulário com os dados iniciais do aluno
+        # Preenche o formulário com os dados iniciais
+        profile = getattr(aluno, 'aluno_profile', None) # Busca segura do perfil
         initial_data = {
             'first_name': aluno.first_name,
             'last_name': aluno.last_name,
             'email': aluno.email,
-            'curso': aluno.aluno_profile.curso if hasattr(aluno, 'aluno_profile') else 'INDEFINIDO',
+            'curso': profile.curso if profile else 'INDEFINIDO',
+            # --- LINHA MODIFICADA PARA CARREGAR O TOKEN ---
+            'rfid_token': profile.rfid_token if profile else ''
+            # --- FIM DA MODIFICAÇÃO ---
         }
         form = EditAlunoForm(initial=initial_data, instance=aluno)
 
