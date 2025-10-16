@@ -17,3 +17,8 @@ requests==2.32.5
 sqlparse==0.5.3
 typing_extensions==4.15.0
 urllib3==2.5.0
+
+gunicorn
+psycopg2-binary # Adaptador para o PostgreSQL
+python-dotenv
+dj-database-url # Para facilitar a configuração do DB
