@@ -267,3 +267,13 @@ tr:nth-child(even) {
 .btn-edit:hover {
     background-color: #286090;
 }
+
+/* --- Estilos para a Tabela de Logs --- */
+.status-granted {
+    color: var(--ifrs-green);
+    font-weight: bold;
+}
+.status-denied {
+    color: var(--danger-red);
+    font-weight: bold;
+}

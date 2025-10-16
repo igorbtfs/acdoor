@@ -13,3 +13,9 @@ class BolsistaSerializer(serializers.ModelSerializer):
         model = User
         # Lista de campos que serão expostos na API
         fields = ['nome_completo', 'email', 'rfid_token']
+
+class AccessLogSerializer(serializers.Serializer):
+    """
+    Serializer para validar o UID recebido do ESP32.
+    """
+    uid = serializers.CharField(max_length=32)

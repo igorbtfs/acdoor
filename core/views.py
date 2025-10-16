@@ -5,7 +5,7 @@ from django.contrib.auth.models import User, Group # Adicione Group aqui
 from django.contrib.auth import get_user_model
 from django.http import HttpResponseForbidden
 from django.contrib import messages # Para exibir mensagens de sucesso/erro
-from .models import ProfessorProfile, AlunoProfile
+from .models import ProfessorProfile, AlunoProfile, AccessLog
 from .forms import AddBolsistaForm, EditAlunoForm
 
 def home(request):
@@ -183,3 +183,17 @@ def edit_aluno(request, student_id):
         'aluno': aluno
     }
     return render(request, 'gerenciamento/edit_aluno.html', context)
+
+@login_required
+def access_logs_view(request):
+    """
+    Busca e exibe todos os logs de acesso, dos mais recentes aos mais antigos.
+    """
+    # .select_related('user') otimiza a consulta, buscando os dados do usuário
+    # relacionado na mesma query para evitar múltiplas chamadas ao banco.
+    logs = AccessLog.objects.select_related('user').order_by('-timestamp')
+
+    context = {
+        'logs': logs
+    }
+    return render(request, 'gerenciamento/access_logs.html', context)

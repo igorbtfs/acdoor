@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Logs de Acesso à Sala</h1>
+    <p>Histórico de todas as tentativas de acesso registradas pelo leitor.</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Data e Hora</th>
+                <th>UID do Cartão</th>
+                <th>Status</th>
+                <th>Usuário</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td>{{ log.timestamp|date:"d/m/Y H:i:s" }}</td>
+                <td>{{ log.uid }}</td>
+                <td>
+                    <span class="status-{{ log.status|lower }}">
+                        {{ log.get_status_display }}
+                    </span>
+                </td>
+                <td>{{ log.user.get_full_name|default:"Desconhecido" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4">Nenhum log de acesso encontrado.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
