@@ -1,21 +1,13 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Página Inicial</title>
-</head>
-<body>
-    <h1>Bem-vindo ao nosso site!</h1>
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Bem-vindo ao AC-Door!</h1>
 
     {% if user.is_authenticated %}
-        <p>Olá, {{ user.first_name }} {{ user.last_name }}! ({{ user.email }})</p>
-        {% if 'Professores' in user.groups.all|join:',' %}
-            <p><a href="{% url 'gerenciar_bolsistas' %}"><strong>Gerenciar meus bolsistas</strong></a></p>
-        {% endif %}
-        <p><a href="/accounts/logout/">Sair (Logout)</a></p>
+        <p>Este é o sistema de controle de acesso do laboratório de robótica.</p>
     {% else %}
         <p>Você não está logado.</p>
-        <p><a href="{% url 'login' %}">Fazer Login</a></p>
+        <p>Por favor, faça o login para continuar.</p>
+        <a href="{% url 'account_login' %}" class="btn btn-primary">Fazer Login</a>
     {% endif %}
-</body>
-</html>
+{% endblock %}

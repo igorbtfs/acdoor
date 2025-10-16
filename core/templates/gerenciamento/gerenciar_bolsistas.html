@@ -1,58 +1,128 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>Gerenciar Bolsistas</title>
-    <style>
-        body { font-family: sans-serif; margin: 2em; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        button { padding: 5px 10px; cursor: pointer; }
-        .add { background-color: #5cb85c; color: white; border: none; }
-        .remove { background-color: #d9534f; color: white; border: none; }
-    </style>
-</head>
-<body>
-    <h1>Gerenciamento de Bolsistas</h1>
-    <p>Bem-vindo, {{ user.get_full_name }}.</p>
-    <p><a href="{% url 'home' %}">Voltar para a página inicial</a></p>
+{% extends 'base.html' %}
 
+{% block content %}
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="add-manual-form">
+        <h2>Adicionar Bolsista Manualmente</h2>
+        <form method="post" action="{% url 'gerenciar_bolsistas' %}">
+            {% csrf_token %}
+            {{ add_form.as_p }}
+            <button type="submit" class="btn btn-primary">Adicionar Aluno</button>
+        </form>
+    </div>
+
+    <h2 style="margin-top: 40px;">Lista de Alunos</h2>
     <table>
         <thead>
             <tr>
                 <th>Aluno</th>
                 <th>Email</th>
-                <th>Ação</th>
+                <th>Curso</th>
+                <th>Orientação</th>
+                <th>Ações</th>
             </tr>
         </thead>
         <tbody>
             {% for aluno in todos_os_alunos %}
             <tr>
-                <td>{{ aluno.get_full_name }}</td>
+                <td>{{ aluno.get_full_name|default:aluno.username }}</td>
                 <td>{{ aluno.email }}</td>
+                <td>{{ aluno.aluno_profile.get_curso_display|default:"Não definido" }}</td>
                 <td>
-                    <form method="post" action="{% url 'gerenciar_bolsistas' %}">
+                    <form method="post" action="{% url 'gerenciar_bolsistas' %}" style="margin: 0;">
                         {% csrf_token %}
                         <input type="hidden" name="student_id" value="{{ aluno.id }}">
-
                         {% if aluno in bolsistas_gerenciados %}
                             <input type="hidden" name="action" value="remove">
-                            <button type="submit" class="remove">Remover</button>
+                            <button type="submit" class="btn btn-danger">Remover</button>
                         {% else %}
                             <input type="hidden" name="action" value="add">
-                            <button type="submit" class="add">Adicionar</button>
+                            <button type="submit" class="btn btn-primary">Adicionar</button>
                         {% endif %}
                     </form>
+                </td>
+                <td>
+                    <a href="{% url 'edit_aluno' aluno.id %}" class="btn" style="background-color: #337ab7; color: white; margin-right: 5px;">Editar</a>
+
+                    <button type="button" class="btn delete-btn" 
+                            data-aluno-nome="{{ aluno.get_full_name|default:aluno.username }}"
+                            data-delete-url="{% url 'delete_aluno' aluno.id %}">
+                        Excluir
+                    </button>
+
                 </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="3">Nenhum aluno encontrado no sistema.</td>
+                <td colspan="5">Nenhum aluno encontrado no sistema.</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
-</body>
-</html>
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Confirmar Exclusão</h2>
+            <p>Você tem certeza que deseja excluir permanentemente o aluno <strong id="alunoNameToDelete"></strong>?</p>
+            <p style="font-weight: bold; color: var(--danger-red);">Esta ação não pode ser desfeita.</p>
+
+            <form id="deleteForm" method="post">
+                {% csrf_token %}
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-cancel">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Sim, Excluir</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Pega os elementos do DOM
+        const modal = document.getElementById('deleteModal');
+        const alunoNameSpan = document.getElementById('alunoNameToDelete');
+        const deleteForm = document.getElementById('deleteForm');
+        const closeBtn = modal.querySelector('.close-btn');
+        const cancelBtn = modal.querySelector('.btn-cancel');
+
+        // Pega todos os botões de exclusão da tabela
+        const deleteButtons = document.querySelectorAll('.delete-btn');
+
+        // Adiciona um evento de clique para cada botão de exclusão
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Pega o nome e a URL dos atributos data-* do botão clicado
+                const alunoNome = this.dataset.alunoNome;
+                const deleteUrl = this.dataset.deleteUrl;
+
+                // Preenche o modal com as informações corretas
+                alunoNameSpan.textContent = alunoNome;
+                deleteForm.action = deleteUrl;
+
+                // Mostra o modal
+                modal.style.display = 'block';
+            });
+        });
+
+        // Função para fechar o modal
+        const closeModal = function() {
+            modal.style.display = 'none';
+        }
+
+        // Eventos para fechar o modal
+        closeBtn.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+        window.addEventListener('click', function(event) {
+            if (event.target == modal) {
+                closeModal();
+            }
+        });
+    </script>
+{% endblock %}

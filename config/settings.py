@@ -12,9 +12,13 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv # Adicione esta importação
+from django.contrib.messages import constants as message_constants
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+load_dotenv() # Adicione esta linha para carregar as variáveis do .env
 
 
 # Quick-start development settings - unsuitable for production
@@ -27,7 +31,6 @@ SECRET_KEY = 'django-insecure-s=f-dz9wolz#n#df5$qw69c-ava@87_qipz^mc!tw%a64lnq6^
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
 
 # Application definition
 
@@ -46,6 +49,8 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google', # Provider específico do Google
+    'rest_framework',
+    'rest_framework.authtoken',
 ]
 
 MIDDLEWARE = [
@@ -146,6 +151,8 @@ SITE_ID = 1
 
 # config/settings.py
 
+
+# Oauth2 --------------------------------------------------------------------------
 # Informa ao allauth para usar nosso adaptador personalizado
 SOCIALACCOUNT_ADAPTER = 'core.adapters.MySocialAccountAdapter'
 
@@ -172,6 +179,7 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 # Redirecionamentos após login/logout
+LOGIN_URL = '/accounts/login/' # Adicione esta linha
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
@@ -179,3 +187,21 @@ LOGOUT_REDIRECT_URL = '/'
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_AUTHENTICATION_METHOD = 'email'
+
+# Desabilita mensagens específicas do django-allauth
+ACCOUNT_MESSAGES = {
+    'logged_in': None,
+    'logged_out': None,
+}
+
+
+
+# estilo ------------------------------------------------------------
+# Configuração de Arquivos Estáticos
+STATIC_URL = 'static/'
+
+# Diz ao Django para procurar arquivos estáticos também na pasta 'static' de cada app
+# e na pasta que definimos abaixo.
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'core/static'),
+]

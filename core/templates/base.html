@@ -1,0 +1,34 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AC-Door - Controle de Acesso</title>
+    <link rel="stylesheet" href="{% static 'core/css/styles.css' %}">
+</head>
+<body>
+    <header class="navbar">
+        <div class="container">
+            <a href="{% url 'home' %}" class="navbar-brand">AC-Door IFRS</a>
+            <nav class="navbar-nav">
+                {% if user.is_authenticated %}
+                    <span>Olá, {{ user.first_name }}!</span>
+                    {% if 'Professores' in user.groups.all|join:',' %}
+                        <a href="{% url 'gerenciar_bolsistas' %}">Meus Bolsistas</a>
+                        <a href="{% url 'listar_bolsistas_orientadores' %}">Painel Geral</a>
+                    {% endif %}
+                    <a href="{% url 'account_logout' %}">Sair</a>
+                {% else %}
+                    <a href="{% url 'account_login' %}">Entrar</a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        {% block content %}
+        {% endblock %}
+    </main>
+</body>
+</html>
