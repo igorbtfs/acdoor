@@ -25,6 +25,7 @@
                 <th>Aluno</th>
                 <th>Email</th>
                 <th>Curso</th>
+                <th>UID do Cartão</th>
                 <th>Orientação</th>
                 <th>Ações</th>
             </tr>
@@ -35,6 +36,7 @@
                 <td>{{ aluno.get_full_name|default:aluno.username }}</td>
                 <td>{{ aluno.email }}</td>
                 <td>{{ aluno.aluno_profile.get_curso_display|default:"Não definido" }}</td>
+                <td>{{ aluno.aluno_profile.rfid_token|default:"-" }}</td>
                 <td>
                     <form method="post" action="{% url 'gerenciar_bolsistas' %}" style="margin: 0;">
                         {% csrf_token %}
@@ -61,7 +63,7 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="5">Nenhum aluno encontrado no sistema.</td>
+                <td colspan="6">Nenhum aluno encontrado no sistema.</td>
             </tr>
             {% endfor %}
         </tbody>

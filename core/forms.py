@@ -2,7 +2,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
-from .models import CURSO_CHOICES
+from .models import CURSO_CHOICES, AlunoProfile
 
 class AddBolsistaForm(forms.Form):
     # Adicione o campo de nome
@@ -39,6 +39,13 @@ class EditAlunoForm(forms.Form):
     last_name = forms.CharField(label="Sobrenome")
     email = forms.EmailField(label="E-mail")
     curso = forms.ChoiceField(label="Curso", choices=CURSO_CHOICES)
+    # `required=False` permite que o campo seja salvo em branco (para alunos que ainda não têm um cartão)
+    rfid_token = forms.CharField(
+        label="UID do Cartão RFID",
+        required=False,
+        widget=forms.TextInput(attrs={'placeholder': 'Ex: A1 B2 C3 D4'})
+    )
+
 
     def __init__(self, *args, **kwargs):
         # Guardamos o usuário original para usar na validação
@@ -60,3 +67,23 @@ class EditAlunoForm(forms.Form):
             raise ValidationError("Este e-mail já está em uso por outro aluno.")
 
         return email
+    
+    def clean_rfid_token(self):
+        """
+        Validação para o UID do cartão.
+        """
+        token = self.cleaned_data.get('rfid_token', '').upper().strip()
+
+        # Se o campo estiver vazio, é válido
+        if not token:
+            return token
+
+        # Se o token não mudou, é válido
+        if self.instance and hasattr(self.instance, 'aluno_profile') and self.instance.aluno_profile.rfid_token == token:
+            return token
+
+        # Se o token mudou, verifica se já está em uso por outro aluno
+        if AlunoProfile.objects.filter(rfid_token=token).exists():
+            raise ValidationError("Este UID de cartão já está atribuído a outro aluno.")
+
+        return token
