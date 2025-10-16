@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Painel de Orientação de Bolsistas</h1>
+    <p>Veja abaixo a lista de todos os bolsistas e seus respectivos orientadores.</p>
+
+    <h2>Bolsistas com Orientador</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Aluno Bolsista</th>
+                <th>Professor Orientador</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for perfil in todos_os_perfis %}
+                {% for bolsista in perfil.bolsistas.all %}
+                <tr>
+                    <td>{{ bolsista.get_full_name }} ({{ bolsista.email }})</td>
+                    <td>{{ perfil.user.get_full_name }}</td>
+                </tr>
+                {% endfor %}
+            {% empty %}
+                <tr>
+                    <td colspan="2">Nenhum professor encontrado no sistema.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if alunos_sem_orientador %}
+    <h2 style="margin-top: 40px;">Alunos Bolsistas Sem Orientador</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Aluno</th>
+                <th>Email</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for aluno in alunos_sem_orientador %}
+            <tr>
+                <td>{{ aluno.get_full_name }}</td>
+                <td>{{ aluno.email }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+{% endblock %}

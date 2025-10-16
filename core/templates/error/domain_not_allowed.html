@@ -1,27 +1,16 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>Acesso Negado</title>
-    <style>
-        body { font-family: sans-serif; text-align: center; margin-top: 50px; }
-        .container { max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
-        .email { font-weight: bold; color: #d9534f; }
-    </style>
-</head>
-<body>
-    <div class="container">
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="error-box">
         <h1>Acesso Não Autorizado</h1>
         <p>
             O login com o e-mail <span class="email">{{ email }}</span> não é permitido neste sistema.
         </p>
         <p>
             Por favor, utilize uma conta de e-mail institucional do IFRS - Campus Restinga
-            (@restinga.ifrs.edu.br ou @aluno.restinga.ifrs.edu.br).
+            ou uma conta Gmail autorizada.
         </p>
-        <p>
-            <a href="{% url 'home' %}">Voltar para a página inicial</a>
-        </p>
+        <br>
+        <a href="{% url 'account_logout' %}" class="btn btn-primary">Tentar Novamente</a>
     </div>
-</body>
-</html>
+{% endblock %}

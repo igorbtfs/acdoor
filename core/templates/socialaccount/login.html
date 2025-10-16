@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="login-box">
+    {% if process == "connect" %}
+        <h1>Conectar Conta {{ provider.name }}</h1>
+        <p>Você está prestes a conectar sua conta do {{ provider.name }} ao seu perfil local.</p>
+    {% else %}
+        <h1>Redirecionando...</h1>
+        <p>Você está sendo redirecionado para a página de login do Google.</p>
+        <p>Se nada acontecer, clique no botão abaixo.</p>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">Continuar</button>
+    </form>
+</div>
+{% endblock %}

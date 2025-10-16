@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Editar Aluno: {{ aluno.get_full_name }}</h1>
+    <p>Altere os dados necessários e clique em "Salvar".</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="add-manual-form" style="margin-top: 20px;">
+            {{ form.as_p }}
+        </div>
+        <div class="modal-actions" style="text-align: left;">
+            <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+            <a href="{% url 'gerenciar_bolsistas' %}" class="btn btn-cancel">Cancelar</a>
+        </div>
+    </form>
+{% endblock %}

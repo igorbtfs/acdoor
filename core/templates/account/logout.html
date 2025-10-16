@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="login-box">
+    <h1>Confirmar Saída</h1>
+    <p>Você tem certeza que deseja sair?</p>
+    <br>
+    <form method="post" action="{% url 'account_logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Sair</button>
+    </form>
+</div>
+{% endblock %}
