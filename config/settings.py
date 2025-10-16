@@ -14,6 +14,7 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv # Adicione esta importação
 from django.contrib.messages import constants as message_constants
+import dj_database_url # Adicione esta importação
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -30,7 +31,8 @@ SECRET_KEY = 'django-insecure-s=f-dz9wolz#n#df5$qw69c-ava@87_qipz^mc!tw%a64lnq6^
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['192.168.1.2', "esp32", "127.0.0.0", "localhost", "127.0.0.1"]
+#ALLOWED_HOSTS = ['192.168.1.2', "esp32", "127.0.0.0", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost,192.168.1.2').split(',')
 
 # Application definition
 
@@ -88,13 +90,17 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+#DATABASES = {
+#    'default': {
+#        'ENGINE': 'django.db.backends.sqlite3',
+#        'NAME': BASE_DIR / 'db.sqlite3',
+#    }
+#}
+# CONFIGURAÇÃO DO BANCO DE DADOS
+# Remove a configuração antiga do SQLite
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -207,3 +213,6 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'core/static'),
 ]
+
+# O Nginx irá servir os arquivos a partir desta pasta
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
