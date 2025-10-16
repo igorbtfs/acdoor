@@ -14,6 +14,9 @@
             <nav class="navbar-nav">
                 {% if user.is_authenticated %}
                     <span>Olá, {{ user.first_name }}!</span>
+
+                    <a href="{% url 'access_logs' %}">Logs de Acesso</a>
+
                     {% if 'Professores' in user.groups.all|join:',' %}
                         <a href="{% url 'gerenciar_bolsistas' %}">Meus Bolsistas</a>
                         <a href="{% url 'listar_bolsistas_orientadores' %}">Painel Geral</a>

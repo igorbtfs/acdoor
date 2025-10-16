@@ -11,162 +11,127 @@
 const char* ssid = "SciFi";
 const char* password = "darksouls";
 
-// Endereço do seu servidor Django (use o IP da sua máquina na rede local para testes)
+// 2. ENDEREÇO DO SEU SERVIDOR DJANGO
+// Use o IP da sua máquina na rede local. Ex: "http://192.168.1.15:8000/api/v1/log-access/"
+const char* logServerName = "http://192.168.1.2:8000/api/v1/log-access/";
 const char* serverName = "http://192.168.1.2:8000/api/v1/bolsistas/";
 
 // Token de API gerado com 'manage.py drf_create_token esp32_device'
 const char* apiToken = "160ed41d1026044dd7a06e605e15d76c0ccb945e";
 
 // Pinos do Leitor RFID RC522
-#define RST_PIN   22
-#define SS_PIN    5
+// --- CONFIGURAÇÃO DOS PINOS (Hardware) ---
+
+// Pinos para o leitor RFID MFRC522 (conexão SPI padrão)
+#define RST_PIN   22  // Pino de Reset
+#define SS_PIN    5   // Pino "Slave Select" ou "Chip Select"
+
+// Pino que aciona o módulo relé
 #define RELAY_PIN 21
+
 // --- FIM DAS CONFIGURAÇÕES ---
 
-MFRC522 mfrc522(SS_PIN, RST_PIN);
-std::vector<String> validTokens;
-unsigned long lastApiUpdateTime = 0;
-const long apiUpdateInterval = 300000;
 
+// Instancia o objeto do leitor RFID
+MFRC522 mfrc522(SS_PIN, RST_PIN);
+
+
+/**
+ * @brief Função de inicialização principal. Executada uma vez quando o ESP32 liga.
+ */
 void setup() {
     Serial.begin(115200);
-    Serial.println("\n\nAC-Door IFRS - Iniciando...");
+    Serial.println("\n\nAC-Door IFRS v2.0 - Iniciando...");
+
+    // Configura o pino do relé como saída e garante que a porta comece travada
     pinMode(RELAY_PIN, OUTPUT);
-    digitalWrite(RELAY_PIN, LOW);
+    digitalWrite(RELAY_PIN, LOW); // LOW = Travado (pode ser HIGH dependendo do seu relé)
+
+    // Inicializa os barramentos de comunicação
     SPI.begin();
-    mfrc522.PCD_Init();
-    Serial.println("Leitor RFID inicializado.");
+    mfrc522.PCD_Init(); // Inicia o leitor MFRC522
+
+    Serial.println("Leitor RFID inicializado com sucesso.");
+    
+    // Conecta-se à rede Wi-Fi
     setupWifi();
-    fetchValidTokens();
-    Serial.println("\nSistema pronto! Aproxime um cartao.");
+
+    Serial.println("\n>>> Sistema pronto! Aproxime um cartao. <<<");
 }
 
+/**
+ * @brief Loop principal. Executado repetidamente após o setup.
+ */
 void loop() {
-    if (millis() - lastApiUpdateTime > apiUpdateInterval) {
-        fetchValidTokens();
-    }
+    // Procura por um novo cartão. Se encontrado, lê o UID.
     if (mfrc522.PICC_IsNewCardPresent() && mfrc522.PICC_ReadCardSerial()) {
         handleRfidScan();
+        
+        // Coloca o cartão em modo "halt" para permitir a leitura de um novo cartão.
         mfrc522.PICC_HaltA();
     }
 }
 
+/**
+ * @brief Lida com a leitura de um cartão, envia para o servidor e age na resposta.
+ */
 void handleRfidScan() {
     String scannedUid = getCardUid();
     Serial.println("=============================================");
-    Serial.println("CARTAO DETECTADO!");
-    Serial.print("UID: ");
+    Serial.print("Cartao lido com UID: ");
     Serial.println(scannedUid);
-    Serial.println("---------------------------------------------");
-    Serial.println("DADOS COMPLETOS DO CARTAO (HEX + TEXTO):");
+    Serial.println("Verificando permissao com o servidor...");
 
-    // --- MUDANÇA PRINCIPAL ---
-    // Chamamos nossa nova função customizada em vez da padrão da biblioteca
-    dumpCardToSerialWithText();
-    // --- FIM DA MUDANÇA ---
+    // Pergunta ao servidor se o acesso é permitido para este UID
+    bool accessGranted = checkAccessWithServer(scannedUid);
 
-    Serial.println("---------------------------------------------");
-    Serial.println("Verificando permissao de acesso...");
-
-    if (scannedUid.equalsIgnoreCase("04 5F 6C 8A")) { 
-        Serial.println("AVISO: Cartao de cadastro. Faca login na plataforma.");
-        delay(2000);
-        Serial.println("\nAproxime um cartao.");
-        return;
-    }
-
-    bool accessGranted = false;
-    for (const String& token : validTokens) {
-        if (scannedUid.equalsIgnoreCase(token)) {
-            accessGranted = true;
-            break;
-        }
-    }
-
+    // Age de acordo com a resposta do servidor
     if (accessGranted) {
-        Serial.println("=> RESULTADO: ACESSO PERMITIDO! Abrindo a porta...");
+        Serial.println("=> RESPOSTA DO SERVIDOR: ACESSO PERMITIDO! Abrindo a porta...");
         openDoor();
     } else {
-        Serial.println("=> RESULTADO: ACESSO NEGADO!");
+        Serial.println("=> RESPOSTA DO SERVIDOR: ACESSO NEGADO!");
     }
     
-    delay(2000);
-    Serial.println("\nSistema pronto! Aproxime um cartao.");
-    Serial.println("=============================================\n");
+    delay(2000); // Um delay para evitar leituras duplas e dar tempo de ler o log
+    Serial.println("\n>>> Sistema pronto! Aproxime um cartao. <<<");
 }
 
-// --- NOVA FUNÇÃO PARA LER E TRADUZIR OS BLOCOS ---
-void dumpCardToSerialWithText() {
-    MFRC522::PICC_Type piccType = mfrc522.PICC_GetType(mfrc522.uid.sak);
-    Serial.print(F("Tipo do Cartao: "));
-    Serial.println(mfrc522.PICC_GetTypeName(piccType));
-
-    // Prepara a chave de autenticação (chave de fábrica padrão para MIFARE)
-    MFRC522::MIFARE_Key key;
-    for (byte i = 0; i < 6; i++) key.keyByte[i] = 0xFF;
-
-    byte buffer[18];
-    byte size = sizeof(buffer);
-
-    // Itera por todos os setores do cartão (MIFARE 1K tem 16 setores)
-    for (byte sector = 0; sector < 16; sector++) {
-        Serial.print(F("Setor ")); 
-        if (sector < 10) Serial.print(F(" "));
-        Serial.print(sector);
-
-        // Tenta autenticar o setor
-        byte firstBlock = sector * 4;
-        MFRC522::StatusCode status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, firstBlock, &key, &(mfrc522.uid));
-
-        if (status != MFRC522::STATUS_OK) {
-            Serial.print(F(" -> Falha na autenticacao: "));
-            Serial.println(mfrc522.GetStatusCodeName(status));
-            continue; // Pula para o próximo setor
-        }
-        Serial.println(F(" -> Autenticado com sucesso"));
-
-        // Lê os 4 blocos do setor
-        for (byte blockOffset = 0; blockOffset < 4; blockOffset++) {
-            byte blockAddr = firstBlock + blockOffset;
-            Serial.print(F("  Bloco "));
-            if (blockAddr < 10) Serial.print(F(" "));
-            Serial.print(blockAddr);
-            Serial.print(F("  : "));
-
-            // Tenta ler o bloco
-            status = mfrc522.MIFARE_Read(blockAddr, buffer, &size);
-            if (status != MFRC522::STATUS_OK) {
-                Serial.print(F("Falha na leitura: "));
-                Serial.println(mfrc522.GetStatusCodeName(status));
-                continue; // Pula para o próximo bloco
-            }
-
-            // 1. Imprime os dados em formato Hexadecimal
-            for (byte i = 0; i < 16; i++) {
-                Serial.print(buffer[i] < 0x10 ? " 0" : " ");
-                Serial.print(buffer[i], HEX);
-            }
-            Serial.print(F("  |  "));
-
-            // 2. Imprime os dados em formato de Texto (ASCII)
-            for (byte i = 0; i < 16; i++) {
-                // Imprime o caractere apenas se ele for "imprimível"
-                if (buffer[i] >= 32 && buffer[i] <= 126) {
-                    Serial.write(buffer[i]);
-                } else {
-                    Serial.print(F(".")); // Usa um ponto para caracteres não imprimíveis
-                }
-            }
-            Serial.println();
-        }
+/**
+ * @brief Envia o UID para o servidor Django e retorna true se o acesso for permitido.
+ * @param uid O UID do cartão lido, no formato String.
+ * @return true se o servidor responder com HTTP 200, false caso contrário.
+ */
+bool checkAccessWithServer(String uid) {
+    // Garante que o Wi-Fi está conectado antes de tentar
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("ERRO: Sem conexao WiFi. Nao foi possivel verificar.");
+        return false;
     }
-    // Para a criptografia para liberar o cartão
-    mfrc522.PCD_StopCrypto1();
+
+    HTTPClient http;
+    http.begin(logServerName);
+    
+    // Define os cabeçalhos da requisição HTTP
+    http.addHeader("Authorization", "Token " + String(apiToken));
+    http.addHeader("Content-Type", "application/json");
+
+    // Cria o corpo da requisição no formato JSON: {"uid":"SEU_UID_AQUI"}
+    String jsonPayload = "{\"uid\":\"" + uid + "\"}";
+
+    // Envia a requisição POST com o payload JSON
+    int httpCode = http.POST(jsonPayload);
+    
+    // Libera os recursos
+    http.end();
+
+    // Acesso é concedido apenas se o servidor responder com "200 OK"
+    return (httpCode == 200);
 }
 
-
-// --- Funções Auxiliares (sem alterações) ---
-
+/**
+ * @brief Conecta-se à rede Wi-Fi definida nas configurações.
+ */
 void setupWifi() {
     Serial.print("Conectando ao WiFi: ");
     Serial.print(ssid);
@@ -177,67 +142,38 @@ void setupWifi() {
         Serial.print(".");
     }
     
-    Serial.println("\nWiFi conectado!");
-    Serial.print("Endereco de IP: ");
+    Serial.println("\nWiFi conectado com sucesso!");
+    Serial.print("Endereco de IP do ESP32: ");
     Serial.println(WiFi.localIP());
 }
 
-void fetchValidTokens() {
-    if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("Sem conexao WiFi. Nao foi possivel atualizar tokens.");
-        return;
-    }
-
-    HTTPClient http;
-    http.begin(serverName);
-    http.addHeader("Authorization", "Token " + String(apiToken));
-
-    Serial.println("Atualizando lista de tokens da API...");
-
-    int httpCode = http.GET();
-
-    if (httpCode == 200) {
-        String payload = http.getString();
-        DynamicJsonDocument doc(4096);
-        DeserializationError error = deserializeJson(doc, payload);
-
-        if (error) {
-            Serial.print("Falha no parse do JSON: ");
-            Serial.println(error.c_str());
-            return;
-        }
-
-        validTokens.clear();
-        JsonArray array = doc.as<JsonArray>();
-        for (JsonObject obj : array) {
-            const char* token = obj["rfid_token"];
-            if (token) {
-                validTokens.push_back(String(token));
-            }
-        }
-        Serial.printf("%d tokens validos carregados.\n", validTokens.size());
-
-    } else {
-        Serial.printf("Erro ao contatar a API. Codigo: %d\n", httpCode);
-    }
-
-    http.end();
-    lastApiUpdateTime = millis();
-}
-
+/**
+ * @brief Lê o UID do cartão e o formata como uma String hexadecimal.
+ * @return O UID formatado, ex: "A1 B2 C3 D4".
+ */
 String getCardUid() {
     String content = "";
     for (byte i = 0; i < mfrc522.uid.size; i++) {
-        content += String(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " ");
+        // Adiciona um espaço entre os bytes
+        if (i > 0) {
+            content += " ";
+        }
+        // Adiciona um zero à esquerda se o byte for menor que 0x10
+        if (mfrc522.uid.uidByte[i] < 0x10) {
+            content += "0";
+        }
         content += String(mfrc522.uid.uidByte[i], HEX);
     }
-    content.toUpperCase();
-    return content.substring(1);
+    content.toUpperCase(); // Converte para maiúsculas
+    return content;
 }
 
+/**
+ * @brief Aciona o relé para abrir a porta por um tempo determinado.
+ */
 void openDoor() {
-    digitalWrite(RELAY_PIN, HIGH);
-    delay(5000);
-    digitalWrite(RELAY_PIN, LOW);
-    Serial.println("Porta travada.");
+    digitalWrite(RELAY_PIN, HIGH); // HIGH = Destravado (pode ser LOW dependendo do relé)
+    delay(5000);                   // Mantém a porta aberta por 5 segundos
+    digitalWrite(RELAY_PIN, LOW);  // LOW = Travado
+    Serial.println("Porta travada novamente.");
 }

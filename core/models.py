@@ -57,3 +57,31 @@ class ProfessorProfile(models.Model):
 
     def __str__(self):
         return f"Perfil de {self.user.get_full_name() or self.user.username}"
+    
+class AccessLog(models.Model):
+    STATUS_CHOICES = [
+        ('GRANTED', 'Acesso Concedido'),
+        ('DENIED', 'Acesso Negado'),
+    ]
+
+    timestamp = models.DateTimeField(auto_now_add=True, verbose_name="Data e Hora")
+    uid = models.CharField(max_length=32, verbose_name="UID do Cartão")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, verbose_name="Status")
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Usuário (se conhecido)"
+    )
+
+    def __str__(self):
+        return f"{self.timestamp.strftime('%d/%m/%Y %H:%M')} - {self.uid} - {self.status}"
+
+class UnassignedUIDLog(models.Model):
+    uid = models.CharField(max_length=32, unique=True, verbose_name="UID não atribuído")
+    first_seen = models.DateTimeField(auto_now_add=True, verbose_name="Visto pela primeira vez")
+    last_seen = models.DateTimeField(auto_now=True, verbose_name="Visto por último")
+
+    def __str__(self):
+        return self.uid
