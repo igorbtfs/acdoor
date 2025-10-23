@@ -1,0 +1,279 @@
+/* core/static/core/css/styles.css */
+
+:root {
+    --ifrs-green: #00963F;
+    --ifrs-green-dark: #007a32;
+    --danger-red: #d9534f;
+    --danger-red-dark: #c9302c;
+    --background-light: #f4f4f4;
+    --text-dark: #333;
+    --border-color: #ddd;
+    --box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    margin: 0;
+    background-color: var(--background-light);
+    color: var(--text-dark);
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 0 20px;
+}
+
+/* --- Navbar --- */
+.navbar {
+    background-color: var(--ifrs-green);
+    color: white;
+    padding: 1rem 0;
+    box-shadow: var(--box-shadow);
+}
+
+.navbar .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.navbar-brand {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: white;
+    text-decoration: none;
+}
+
+.navbar-nav {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.navbar-nav a {
+    color: white;
+    text-decoration: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.navbar-nav a:hover {
+    background-color: var(--ifrs-green-dark);
+}
+
+/* --- Conteúdo Principal --- */
+main.container {
+    background-color: white;
+    padding: 2rem 2.5rem;
+    border-radius: 8px;
+    box-shadow: var(--box-shadow);
+    margin-top: 30px;
+}
+
+h1 {
+    color: var(--ifrs-green);
+    border-bottom: 2px solid var(--background-light);
+    padding-bottom: 10px;
+}
+
+/* --- Botões --- */
+.btn {
+    display: inline-block;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 1em;
+    transition: background-color 0.2s;
+}
+
+.btn-primary {
+    background-color: var(--ifrs-green);
+    color: white;
+}
+.btn-primary:hover {
+    background-color: var(--ifrs-green-dark);
+}
+
+.btn-danger {
+    background-color: var(--danger-red);
+    color: white;
+}
+.btn-danger:hover {
+    background-color: var(--danger-red-dark);
+}
+
+.btn-google {
+    background-color: #4285F4;
+    color: white;
+}
+.btn-google:hover {
+    background-color: #357ae8;
+}
+
+/* --- Tabela de Gerenciamento --- */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    border: 1px solid var(--border-color);
+    padding: 12px;
+    text-align: left;
+}
+
+th {
+    background-color: var(--background-light);
+}
+
+tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+/* --- Páginas Específicas --- */
+.login-box, .error-box {
+    text-align: center;
+    padding: 2rem;
+}
+.error-box .email {
+    font-weight: bold;
+    color: var(--danger-red);
+    background-color: #fddede;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+
+/* --- Mensagens (Alerts) --- */
+.messages {
+    margin-bottom: 20px;
+}
+.alert {
+    padding: 15px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
+.alert-success {
+    color: #155724;
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+}
+.alert-error {
+    color: #721c24;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+}
+
+/* --- Formulário de Adição Manual --- */
+.add-manual-form {
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    margin-bottom: 30px;
+}
+.add-manual-form h2 {
+    margin-top: 0;
+    color: var(--text-dark);
+}
+.add-manual-form input[type="email"]{
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    box-sizing: border-box; /* Garante que padding não afete a largura total */
+}
+.add-manual-form .errorlist {
+    color: var(--danger-red);
+    list-style-type: none;
+    padding: 0;
+    margin: -5px 0 10px 0;
+}
+
+/* --- Estilos do Modal --- */
+.modal {
+    display: none; /* Escondido por padrão */
+    position: fixed; /* Fica fixo na tela */
+    z-index: 1000; /* Fica na frente de tudo */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto; /* Permite rolagem se o conteúdo for grande */
+    background-color: rgba(0,0,0,0.5); /* Fundo preto semi-transparente */
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto; /* 15% do topo e centralizado horizontalmente */
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 500px;
+    border-radius: 8px;
+    position: relative;
+    text-align: center;
+}
+
+.close-btn {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    position: absolute;
+    top: 10px;
+    right: 20px;
+}
+
+.close-btn:hover,
+.close-btn:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.modal-actions {
+    margin-top: 20px;
+}
+.modal-actions .btn {
+    margin: 0 10px;
+}
+.btn-cancel {
+    background-color: #777;
+    color: white;
+}
+.delete-btn {
+    background-color: #f0ad4e;
+    color: white;
+}
+.delete-btn:hover {
+    background-color: #ec971f;
+}
+
+/* core/static/core/css/styles.css */
+.btn-edit {
+    background-color: #337ab7;
+    color: white;
+}
+.btn-edit:hover {
+    background-color: #286090;
+}
+
+/* --- Estilos para a Tabela de Logs --- */
+.status-granted {
+    color: var(--ifrs-green);
+    font-weight: bold;
+}
+.status-denied {
+    color: var(--danger-red);
+    font-weight: bold;
+}

@@ -15,3 +15,4 @@ admin.site.register(ProfessorProfile)
 admin.site.register(AlunoProfile) 
 admin.site.register(AccessLog, AccessLogAdmin)
 admin.site.register(UnassignedUIDLog, UnassignedUIDLogAdmin)
+
