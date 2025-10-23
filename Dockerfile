@@ -18,10 +18,17 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # 6. Rodar collectstatic
-RUN python manage.py collectstatic --noinput
+#RUN python manage.py collectstatic --noinput
 
 # 7. (Opcional, mas boa prática) Criar um usuário não-root para rodar a aplicação
 RUN adduser --disabled-password --gecos "" appuser
+
+# 8. Dê a propriedade da pasta /app para o nosso usuário recém-criado
+RUN chown -R appuser:appuser /app
+
+# O Docker criará a pasta do volume como root, então damos permissão a ela também
+RUN mkdir -p /app/staticfiles && chown -R appuser:appuser /app/staticfiles
+
 USER appuser
 
 # A porta que o Gunicorn vai expor DENTRO do container

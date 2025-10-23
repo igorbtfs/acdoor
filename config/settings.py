@@ -32,11 +32,12 @@ SECRET_KEY = 'django-insecure-s=f-dz9wolz#n#df5$qw69c-ava@87_qipz^mc!tw%a64lnq6^
 DEBUG = True
 
 #ALLOWED_HOSTS = ['192.168.1.2', "esp32", "127.0.0.0", "localhost", "127.0.0.1"]
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost,192.168.1.2').split(',')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost,192.168.1.2,192.168.1.33').split(',')
 
 # Application definition
 
 INSTALLED_APPS = [
+    'core',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -44,7 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    'core',
+    #'core',
     # Apps do Allauth
     'django.contrib.sites',  # Obrigatório
     'allauth',
@@ -192,7 +193,7 @@ LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
 # Configurações adicionais do allauth (opcional, mas recomendado)
-ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+ACCOUNT_EMAIL_VERIFICATION = os.environ.get('ACCOUNT_EMAIL_VERIFICATION', 'none')
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_AUTHENTICATION_METHOD = 'email'
 
@@ -216,3 +217,12 @@ STATICFILES_DIRS = [
 
 # O Nginx irá servir os arquivos a partir desta pasta
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Configuração de Envio de E-mail
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
