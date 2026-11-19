@@ -7,7 +7,7 @@ class BolsistaSerializer(serializers.ModelSerializer):
     nome_completo = serializers.CharField(source='get_full_name')
 
     # Um campo para acessar o token RFID através do perfil do aluno
-    rfid_token = serializers.UUIDField(source='aluno_profile.rfid_token', read_only=True)
+    rfid_token = serializers.CharField(source='aluno_profile.rfid_token', read_only=True)
 
     class Meta:
         model = User

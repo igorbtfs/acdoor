@@ -1,10 +1,10 @@
 # docker-compose.yml
-version: '3.8'
 
 services:
   # Container do Banco de Dados PostgreSQL
   db:
     image: postgres:16-alpine
+    restart: unless-stopped
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     env_file:
@@ -20,6 +20,7 @@ services:
   # Container da Aplicação Django
   web:
     build: .
+    restart: unless-stopped
     command: >
       sh -c "python manage.py collectstatic --noinput &&
              python manage.py migrate &&
@@ -37,7 +38,8 @@ services:
 
   # Container do Nginx (Reverse Proxy)
   nginx:
-    image: nginx:1.19.0-alpine
+    image: nginx:stable-alpine
+    restart: unless-stopped
     ports:
       - "80:80"
     volumes:

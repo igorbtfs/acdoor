@@ -12,6 +12,10 @@ db.sqlite3
 
 # Arquivos de credenciais
 .env
+door-esp32/secrets.h
+
+# Arquivos estáticos coletados (collectstatic)
+staticfiles/
 
 # Media files (if not intended for version control)
 media/

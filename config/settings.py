@@ -12,27 +12,55 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
-from dotenv import load_dotenv # Adicione esta importação
-from django.contrib.messages import constants as message_constants
-import dj_database_url # Adicione esta importação
+from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-load_dotenv() # Adicione esta linha para carregar as variáveis do .env
+# Carrega as variáveis do .env (no Docker elas também chegam via env_file)
+load_dotenv(BASE_DIR / '.env')
+
+
+def env_bool(name, default=False):
+    return os.environ.get(name, str(default)).strip().lower() in ('1', 'true', 'yes', 'on')
+
+
+def env_list(name, default=''):
+    return [item.strip() for item in os.environ.get(name, default).split(',') if item.strip()]
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'REMOVIDA-DO-HISTORICO'
+# DEBUG só liga se o .env pedir explicitamente (DEBUG=True). Nunca em produção.
+DEBUG = env_bool('DEBUG', False)
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# A chave vem sempre do ambiente. A chave antiga ficou exposta no histórico do
+# repositório público e não deve mais ser usada.
+SECRET_KEY = os.environ.get('SECRET_KEY', '')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'apenas-desenvolvimento-nao-usar-em-producao'
+    else:
+        raise ImproperlyConfigured(
+            'Defina SECRET_KEY no arquivo .env. Gere uma com: '
+            'python -c "from django.core.management.utils import get_random_secret_key; '
+            'print(get_random_secret_key())"'
+        )
 
-#ALLOWED_HOSTS = ['192.168.1.2', "esp32", "127.0.0.0", "localhost", "127.0.0.1"]
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost,192.168.1.2,192.168.1.33').split(',')
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', '127.0.0.1,localhost,192.168.1.2,192.168.1.33')
+
+# Quando há um proxy com HTTPS na frente (ex.: Nginx Proxy Manager), ele avisa o
+# protocolo original no cabeçalho X-Forwarded-Proto, que o nginx.conf repassa.
+# Sem isso o Django acha que tudo é HTTP e o login do Google monta a URL de
+# retorno errada (http://), que o Google recusa.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Normalmente não é preciso. Use só se o proxy não repassar o X-Forwarded-Proto.
+# Ex.: CSRF_TRUSTED_ORIGINS=https://acdoor.exemplo.com
+CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS')
 
 # Application definition
 
@@ -76,10 +104,10 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
-                'django.template.context_processors.request',
                 'django.template.context_processors.request', # Obrigatório para o allauth
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.permissoes',
             ],
         },
     },
@@ -98,9 +126,10 @@ WSGI_APPLICATION = 'config.wsgi.application'
 #    }
 #}
 # CONFIGURAÇÃO DO BANCO DE DADOS
-# Remove a configuração antiga do SQLite
+# Usa DATABASE_URL (PostgreSQL no Docker). Sem ela, cai num SQLite local,
+# o que permite rodar o projeto e os testes fora do Docker.
 DATABASES = {
-    'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
+    'default': dj_database_url.config(default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
 }
 
 # Password validation
@@ -139,7 +168,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+# (STATIC_URL e demais configurações de estáticos ficam no fim do arquivo)
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -192,10 +221,27 @@ LOGIN_URL = '/accounts/login/' # Adicione esta linha
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
-# Configurações adicionais do allauth (opcional, mas recomendado)
-ACCOUNT_EMAIL_VERIFICATION = os.environ.get('ACCOUNT_EMAIL_VERIFICATION', 'none')
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
+# O login é feito SOMENTE pelo Google. Isso desliga cadastro local
+# (/accounts/signup/), login por senha e reset de senha do allauth, que antes
+# permitiam criar conta com qualquer e-mail e burlar a restrição de domínio.
+# (O /admin/ do Django continua aceitando superusuários criados com createsuperuser.)
+SOCIALACCOUNT_ONLY = True
+ACCOUNT_EMAIL_VERIFICATION = 'none'  # exigido pelo SOCIALACCOUNT_ONLY; o Google já verifica o e-mail
+ACCOUNT_LOGIN_METHODS = {'email'}
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
+
+# Alunos cadastrados manualmente pelo professor já existem no banco sem conta
+# Google vinculada. Como o Google verifica o e-mail e só aceitamos domínios
+# institucionais, o primeiro login com Google é vinculado ao cadastro existente
+# (sem isso o aluno pré-cadastrado nunca conseguia entrar).
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+
+# E-mails que viram administradores (superusuário + acesso ao /admin/ e às telas
+# de gerenciamento) ao entrar com o Google. Lista separada por vírgulas no .env:
+#   ADMIN_EMAILS=matricula@aluno.restinga.ifrs.edu.br
+# Fica no .env, e não aqui, para não publicar e-mails pessoais no repositório.
+ADMIN_EMAILS = [email.lower() for email in env_list('ADMIN_EMAILS')]
 
 # Desabilita mensagens específicas do django-allauth
 ACCOUNT_MESSAGES = {

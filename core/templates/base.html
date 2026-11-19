@@ -17,9 +17,12 @@
 
                     <a href="{% url 'access_logs' %}">Logs de Acesso</a>
 
-                    {% if 'Professores' in user.groups.all|join:',' %}
+                    {% if pode_gerenciar %}
                         <a href="{% url 'gerenciar_bolsistas' %}">Meus Bolsistas</a>
                         <a href="{% url 'listar_bolsistas_orientadores' %}">Painel Geral</a>
+                    {% endif %}
+                    {% if user.is_staff %}
+                        <a href="{% url 'admin:index' %}">Admin</a>
                     {% endif %}
                     <a href="{% url 'account_logout' %}">Sair</a>
                 {% else %}

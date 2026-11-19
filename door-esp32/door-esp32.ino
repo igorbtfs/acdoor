@@ -7,17 +7,12 @@
 //#include <LiquidCrystal_I2C.h>
 #include <vector>
 
-// --- CONFIGURAÇÕES - MODIFIQUE AQUI ---
-const char* ssid = "REMOVIDO";
-const char* password = "REMOVIDA";
-
-// 2. ENDEREÇO DO SEU SERVIDOR DJANGO
-// Use o IP da sua máquina na rede local. Ex: "http://192.168.1.15:8000/api/v1/log-access/"
-const char* logServerName = "http://192.168.1.2:8000/api/v1/log-access/";
-const char* serverName = "http://192.168.1.2:8000/api/v1/bolsistas/";
-
-// Token de API gerado com 'manage.py drf_create_token esp32_device'
-const char* apiToken = "REMOVIDO";
+// --- CONFIGURAÇÕES ---
+// As credenciais (Wi-Fi, endereço do servidor e token da API) ficam em
+// "secrets.h", que NÃO vai para o git. Para compilar:
+//   1. copie secrets.example.h para secrets.h (na mesma pasta deste sketch)
+//   2. preencha os valores
+#include "secrets.h"
 
 // Pinos do Leitor RFID RC522
 // --- CONFIGURAÇÃO DOS PINOS (Hardware) ---

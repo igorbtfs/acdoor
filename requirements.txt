@@ -3,7 +3,7 @@ certifi==2025.10.5
 cffi==2.0.0
 charset-normalizer==3.4.4
 cryptography==46.0.2
-Django==5.2.7
+Django==5.2.19
 django-allauth==65.12.0
 django-oauth-toolkit==3.1.0
 djangorestframework==3.16.1
@@ -18,7 +18,7 @@ sqlparse==0.5.3
 typing_extensions==4.15.0
 urllib3==2.5.0
 
-gunicorn
-psycopg2-binary # Adaptador para o PostgreSQL
-python-dotenv
-dj-database-url # Para facilitar a configuração do DB
+# Produção (Docker)
+gunicorn==27.0.1
+psycopg2-binary==2.9.13 # Adaptador para o PostgreSQL
+dj-database-url==3.1.2 # Para facilitar a configuração do DB

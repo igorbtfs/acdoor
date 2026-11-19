@@ -29,7 +29,7 @@ class AddBolsistaForm(forms.Form):
         if domain != allowed_domain:
             raise ValidationError(f"O e-mail deve pertencer ao domínio '{allowed_domain}'.")
 
-        if User.objects.filter(email=email).exists():
+        if User.objects.filter(email__iexact=email).exists():
             raise ValidationError("Um usuário com este e-mail já existe no sistema.")
 
         return email
@@ -58,13 +58,12 @@ class EditAlunoForm(forms.Form):
         """
         email = self.cleaned_data['email'].lower()
 
-        # Se o e-mail não mudou, ele é válido.
-        if self.instance and self.instance.email == email:
-            return email
-
-        # Se o e-mail mudou, verifica se ele já está em uso por outro usuário.
-        if User.objects.filter(email=email).exists():
-            raise ValidationError("Este e-mail já está em uso por outro aluno.")
+        # Verifica se o e-mail já está em uso por OUTRO usuário.
+        em_uso = User.objects.filter(email__iexact=email)
+        if self.instance:
+            em_uso = em_uso.exclude(pk=self.instance.pk)
+        if em_uso.exists():
+            raise ValidationError("Este e-mail já está em uso por outro usuário.")
 
         return email
     
@@ -72,18 +71,19 @@ class EditAlunoForm(forms.Form):
         """
         Validação para o UID do cartão.
         """
-        token = self.cleaned_data.get('rfid_token', '').upper().strip()
+        # Mesmo formato enviado pelo ESP32: maiúsculas, bytes separados por um espaço.
+        token = ' '.join((self.cleaned_data.get('rfid_token') or '').upper().split())
 
-        # Se o campo estiver vazio, é válido
+        # Campo vazio = aluno sem cartão. Retorna None (e não '') porque o
+        # campo é único no banco: dois alunos com '' dariam erro 500.
         if not token:
-            return token
+            return None
 
-        # Se o token não mudou, é válido
-        if self.instance and hasattr(self.instance, 'aluno_profile') and self.instance.aluno_profile.rfid_token == token:
-            return token
-
-        # Se o token mudou, verifica se já está em uso por outro aluno
-        if AlunoProfile.objects.filter(rfid_token=token).exists():
+        # Verifica se o UID já está em uso por OUTRO aluno
+        em_uso = AlunoProfile.objects.filter(rfid_token=token)
+        if self.instance:
+            em_uso = em_uso.exclude(user=self.instance)
+        if em_uso.exists():
             raise ValidationError("Este UID de cartão já está atribuído a outro aluno.")
 
         return token

@@ -37,7 +37,8 @@ class LogAccessView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = AccessLogSerializer(data=request.data)
         if serializer.is_valid():
-            uid = serializer.validated_data['uid']
+            # Normaliza para o mesmo formato salvo pelo formulário de edição.
+            uid = ' '.join(serializer.validated_data['uid'].upper().split())
 
             try:
                 # 1. Tenta encontrar o perfil do aluno pelo UID.
@@ -46,8 +47,10 @@ class LogAccessView(APIView):
                 aluno = profile.user
 
                 # 2. O perfil foi encontrado. Agora, vamos verificar a autorização.
-                # A verificação é se o aluno tem algum orientador vinculado.
-                if aluno.orientadores.exists():
+                # A verificação é se a conta está ativa e se o aluno tem algum
+                # orientador vinculado. (Desativar o usuário no /admin/ também
+                # bloqueia o cartão.)
+                if aluno.is_active and aluno.orientadores.exists():
                     # 2a. TEM ORIENTADOR => ACESSO CONCEDIDO
                     AccessLog.objects.create(uid=uid, status='GRANTED', user=aluno)
                     
@@ -70,7 +73,8 @@ class LogAccessView(APIView):
                 # 3. NENHUM PERFIL ENCONTRADO => ACESSO NEGADO
                 # O UID não pertence a ninguém cadastrado.
                 AccessLog.objects.create(uid=uid, status='DENIED', user=None)
-                UnassignedUIDLog.objects.get_or_create(uid=uid)
+                # update_or_create (e não get_or_create) para atualizar o "visto por último".
+                UnassignedUIDLog.objects.update_or_create(uid=uid)
                 
                 # Retorna 403 Forbidden, informando que o usuário é desconhecido.
                 return Response({

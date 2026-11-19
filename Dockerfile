@@ -1,11 +1,11 @@
 # Dockerfile
 
 # 1. Usar uma imagem base oficial do Python
-FROM python:3.10-slim
+FROM python:3.12-slim
 
 # 2. Definir variáveis de ambiente
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 # 3. Criar e definir o diretório de trabalho
 WORKDIR /app

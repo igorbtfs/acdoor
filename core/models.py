@@ -1,7 +1,6 @@
 # core/models.py
 from django.db import models
 from django.contrib.auth.models import User
-import uuid 
 
 # Lista de cursos pré-estipulada
 CURSO_CHOICES = [
@@ -24,9 +23,8 @@ CURSO_CHOICES = [
 class AlunoProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='aluno_profile')
     curso = models.CharField(max_length=100, choices=CURSO_CHOICES)
-    # --- NOVO CAMPO ---
-    # Gera um token único para cada perfil de aluno criado.
-    # `editable=False` impede que seja modificado no admin.
+    # UID do cartão RFID do aluno, no formato enviado pelo ESP32 ("A1 B2 C3 D4").
+    # Fica NULL enquanto o aluno não tem cartão (nunca '' - o campo é único).
     rfid_token = models.CharField(
         max_length=32,
         unique=True,
@@ -34,7 +32,6 @@ class AlunoProfile(models.Model):
         null=True,
         verbose_name="UID do Cartão RFID"
     )
-    # --- FIM DO NOVO CAMPO ---
 
     def __str__(self):
         return f"Perfil de {self.user.get_full_name() or self.user.username}"
