@@ -342,6 +342,60 @@ class CaminhoAteOGoogleTests(TestCase):
         self.assertTrue(destino['Location'].startswith('https://accounts.google.com/'))
 
 
+@override_settings(SOCIALACCOUNT_PROVIDERS=GOOGLE_FAKE)
+class InterfaceTests(Cenario):
+    """Tela de entrada, sair com um clique, títulos e páginas de erro."""
+
+    def test_tela_de_entrada_tem_o_botao_do_google(self):
+        for pagina in ('/', '/accounts/login/'):
+            response = self.client.get(pagina)
+            self.assertContains(response, 'Fazer login com o Google', msg_prefix=pagina)
+            self.assertContains(response, 'class="btn-google"', msg_prefix=pagina)
+            self.assertContains(response, '<svg', msg_prefix=pagina)       # o "G" do Google
+            self.assertContains(response, 'container estreito', msg_prefix=pagina)
+            self.assertNotContains(response, '{#', msg_prefix=pagina)   # comentário de template vazando
+            self.assertNotContains(response, '{%', msg_prefix=pagina)
+
+    def test_sair_com_um_clique(self):
+        self.client.force_login(self.professor)
+        pagina = self.client.get('/')
+        self.assertContains(pagina, '<form method="post" action="/accounts/logout/"')
+
+        response = self.client.post('/accounts/logout/')
+        self.assertRedirects(response, '/', fetch_redirect_response=False)
+        self.assertIn('/accounts/login/', self.client.get(reverse('alunos'))['Location'])
+
+    def test_cada_pagina_tem_o_proprio_titulo(self):
+        self.assertContains(self.client.get('/accounts/login/'), '<title>Entrar · AC-Door IFRS</title>')
+        self.client.force_login(self.admin)
+        for nome, titulo in (('home', 'Início'), ('alunos', 'Alunos'), ('cartoes_pendentes', 'Cartões pendentes'),
+                             ('gerenciar_bolsistas', 'Meus bolsistas'), ('access_logs', 'Logs de acesso'),
+                             ('listar_bolsistas_orientadores', 'Orientadores'), ('auditoria', 'Auditoria')):
+            self.assertContains(self.client.get(reverse(nome)), f'<title>{titulo} · AC-Door IFRS</title>')
+
+    def test_atalho_de_teclado_e_pagina_atual_no_menu(self):
+        self.client.force_login(self.professor)
+        pagina = self.client.get(reverse('alunos'))
+        self.assertContains(pagina, '<a class="pular" href="#conteudo">')
+        self.assertContains(pagina, 'id="conteudo"')
+        self.assertContains(pagina, 'class="ativo" aria-current="page">Alunos</a>')
+        self.assertContains(pagina, '<th scope="col">Aluno</th>')
+
+    def test_pagina_nao_encontrada(self):
+        response = self.client.get('/isso-nao-existe/')
+        self.assertEqual(response.status_code, 404)
+        self.assertContains(response, 'Página não encontrada', status_code=404)
+        self.assertContains(response, 'Voltar para o início', status_code=404)
+
+    def test_envio_recusado_por_seguranca_explica_o_que_houve(self):
+        cliente = Client(enforce_csrf_checks=True)
+        cliente.force_login(self.professor)
+        response = cliente.post(reverse('reivindicar_aluno', args=[self.aluno.id]), {'valido_ate': dia(10)})
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, 'Nada foi alterado', status_code=403)
+        self.assertFalse(Orientacao.objects.exists())
+
+
 class CadastroLocalFechadoTests(TestCase):
     def test_cadastro_local_nao_existe(self):
         self.assertEqual(self.client.get('/accounts/signup/').status_code, 404)

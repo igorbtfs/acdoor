@@ -1,4 +1,6 @@
 {% extends 'base.html' %}
+
+{% block titulo %}Meus bolsistas{% endblock %}
 {% load acdoor %}
 
 {% block content %}
@@ -13,12 +15,12 @@
         <table class="tabela tabela-cartoes">
             <thead>
                 <tr>
-                    <th>Aluno</th>
-                    <th>Curso</th>
-                    <th>Cartão</th>
-                    <th>Situação</th>
-                    <th>Válido até</th>
-                    <th>Ações</th>
+                    <th scope="col">Aluno</th>
+                    <th scope="col">Curso</th>
+                    <th scope="col">Cartão</th>
+                    <th scope="col">Situação</th>
+                    <th scope="col">Válido até</th>
+                    <th scope="col">Ações</th>
                 </tr>
             </thead>
             <tbody>

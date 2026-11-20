@@ -1,15 +1,23 @@
 {% extends 'base.html' %}
-{% load socialaccount acdoor %}
+{% load acdoor %}
+
+{% block titulo %}Início{% endblock %}
+{% block classe_main %}{% if not user.is_authenticated %}estreito{% endif %}{% endblock %}
 
 {% block content %}
     {% if not user.is_authenticated %}
-        <h1>Bem-vindo ao AC-Door</h1>
-        <p>Sistema de controle de acesso do laboratório de robótica do IFRS Campus Restinga.</p>
-        <p>Entre com sua conta institucional do Google para ver a situação do seu acesso.</p>
-        <form method="post" action="{% provider_login_url 'google' %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-google">Entrar com Google</button>
-        </form>
+        <div class="entrada">
+            <h1>AC-Door</h1>
+            <p class="entrada-subtitulo">Controle de acesso do laboratório de robótica<br>IFRS Campus Restinga</p>
+            <p>Entre para ver a situação do seu acesso ou gerenciar os seus bolsistas.</p>
+
+            {% include 'account/_botao_google.html' %}
+
+            <p class="detalhe">
+                Use a sua conta institucional: <strong>@restinga.ifrs.edu.br</strong> ou
+                <strong>@aluno.restinga.ifrs.edu.br</strong>.
+            </p>
+        </div>
     {% else %}
         <h1>Olá, {{ user.first_name|default:user.username }}</h1>
 
@@ -80,7 +88,7 @@
             <div class="tabela-wrap">
                 <table class="tabela tabela-cartoes">
                     <thead>
-                        <tr><th>Data e hora</th><th>Resultado</th></tr>
+                        <tr><th scope="col">Data e hora</th><th scope="col">Resultado</th></tr>
                     </thead>
                     <tbody>
                         {% for log in meus_acessos %}

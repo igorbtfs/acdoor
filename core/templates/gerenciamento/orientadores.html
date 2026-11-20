@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% block titulo %}Orientadores{% endblock %}
+
 {% block content %}
     <h1>Orientadores</h1>
     <p class="ajuda">
@@ -13,11 +15,11 @@
             <table class="tabela tabela-cartoes">
                 <thead>
                     <tr>
-                        <th>Servidor</th>
-                        <th>Origem</th>
-                        <th>Projeto, edital ou motivo</th>
-                        <th>Pedido em</th>
-                        <th>Decisão</th>
+                        <th scope="col">Servidor</th>
+                        <th scope="col">Origem</th>
+                        <th scope="col">Projeto, edital ou motivo</th>
+                        <th scope="col">Pedido em</th>
+                        <th scope="col">Decisão</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -64,10 +66,10 @@
         <table class="tabela tabela-cartoes">
             <thead>
                 <tr>
-                    <th>Orientador</th>
-                    <th>Como recebeu o papel</th>
-                    <th>Bolsistas</th>
-                    <th>Ações</th>
+                    <th scope="col">Orientador</th>
+                    <th scope="col">Como recebeu o papel</th>
+                    <th scope="col">Bolsistas</th>
+                    <th scope="col">Ações</th>
                 </tr>
             </thead>
             <tbody>
@@ -127,10 +129,10 @@
             <table class="tabela tabela-cartoes">
                 <thead>
                     <tr>
-                        <th>Aluno</th>
-                        <th>Situação da orientação</th>
-                        <th>Válido até</th>
-                        <th>Ações</th>
+                        <th scope="col">Aluno</th>
+                        <th scope="col">Situação da orientação</th>
+                        <th scope="col">Válido até</th>
+                        <th scope="col">Ações</th>
                     </tr>
                 </thead>
                 <tbody>

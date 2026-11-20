@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Tente de novo{% endblock %}
+{% block classe_main %}estreito{% endblock %}
+
+{% block content %}
+<div class="entrada">
+    <h1>Não foi possível enviar</h1>
+    <p>
+        A página ficou aberta por muito tempo ou a sua sessão terminou, e o envio foi recusado por segurança.
+        Nada foi alterado.
+    </p>
+    <p><a href="{% url 'home' %}" class="btn btn-primary">Voltar para o início</a></p>
+    <p class="detalhe">Depois, abra a tela de novo e repita a ação.</p>
+</div>
+{% endblock %}

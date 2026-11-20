@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Página não encontrada{% endblock %}
+{% block classe_main %}estreito{% endblock %}
+
+{% block content %}
+<div class="entrada">
+    <h1>Página não encontrada</h1>
+    <p>O endereço que você abriu não existe, ou o item foi removido.</p>
+    <p><a href="{% url 'home' %}" class="btn btn-primary">Voltar para o início</a></p>
+</div>
+{% endblock %}

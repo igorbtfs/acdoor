@@ -1,14 +1,18 @@
 /* core/static/core/css/styles.css */
 
 :root {
-    --ifrs-green: #00963F;
-    --ifrs-green-dark: #007a32;
-    --danger-red: #d9534f;
-    --danger-red-dark: #c9302c;
-    --alerta: #b7791f;
+    /* Cores conferidas pelo contraste (WCAG AA, 4,5:1 para texto):
+       o verde da marca (#00963F) com texto branco dá só 3,9:1, então fundos
+       com texto branco usam o verde escuro (5,5:1). */
+    --ifrs-green: #00963F;         /* detalhes: bordas, foco, destaques */
+    --ifrs-green-dark: #007a32;    /* fundos com texto branco, títulos e links */
+    --ifrs-green-darker: #005f27;  /* item ativo e passar o mouse */
+    --danger-red: #c9302c;
+    --danger-red-dark: #a52823;
+    --alerta: #8a5a00;
     --background-light: #f4f4f4;
     --text-dark: #333;
-    --text-muted: #666;
+    --text-muted: #5f6368;
     --border-color: #ddd;
     --box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
@@ -37,7 +41,7 @@ a {
 
 /* --- Navbar --- */
 .navbar {
-    background-color: var(--ifrs-green);
+    background-color: var(--ifrs-green-dark);
     color: white;
     padding: 0.75rem 0;
     box-shadow: var(--box-shadow);
@@ -78,8 +82,48 @@ a {
 }
 
 .navbar-nav a:hover,
-.navbar-nav a.ativo {
-    background-color: var(--ifrs-green-dark);
+.navbar-nav a.ativo,
+.nav-form button:hover {
+    background-color: var(--ifrs-green-darker);
+}
+
+.navbar a:focus-visible,
+.nav-form button:focus-visible {
+    outline: 2px solid white;
+    outline-offset: 1px;
+}
+
+/* "Sair" é um botão (envia um POST), com a aparência dos links do menu. */
+.nav-form {
+    display: inline;
+    margin: 0;
+}
+.nav-form button {
+    padding: 6px 10px;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: white;
+    font: inherit;
+    cursor: pointer;
+}
+
+/* Atalho de teclado: só aparece quando recebe o foco. */
+.pular {
+    position: absolute;
+    left: -9999px;
+    top: 8px;
+    z-index: 10;
+    padding: 8px 12px;
+    border-radius: 4px;
+    background-color: white;
+    color: var(--ifrs-green-dark);
+}
+.pular:focus {
+    left: 8px;
+}
+main:focus {
+    outline: none;
 }
 
 .navbar-usuario {
@@ -118,7 +162,7 @@ main.container {
 }
 
 h1 {
-    color: var(--ifrs-green);
+    color: var(--ifrs-green-dark);
     border-bottom: 2px solid var(--background-light);
     padding-bottom: 10px;
     margin-top: 0;
@@ -182,11 +226,11 @@ h2 .detalhe {
 }
 
 .btn-primary {
-    background-color: var(--ifrs-green);
+    background-color: var(--ifrs-green-dark);
     color: white;
 }
 .btn-primary:hover {
-    background-color: var(--ifrs-green-dark);
+    background-color: var(--ifrs-green-darker);
 }
 
 .btn-secundario {
@@ -206,28 +250,55 @@ h2 .detalhe {
     background-color: var(--danger-red-dark);
 }
 
+/* Botão "Fazer login com o Google": fundo branco, borda cinza e o "G" colorido,
+   como pede a identidade visual do Google para esse botão. */
+.form-google {
+    margin: 1.5rem 0 1rem 0;
+}
 .btn-google {
-    background-color: #4285F4;
-    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 0 16px 0 12px;
+    border: 1px solid #747775;
+    border-radius: 4px;
+    background-color: #fff;
+    color: #1f1f1f;
+    font-family: Roboto, "Segoe UI", Arial, sans-serif;
+    font-size: 1em;
+    font-weight: 500;
+    line-height: 1.25;
+    cursor: pointer;
+    transition: background-color 0.2s, box-shadow 0.2s;
 }
 .btn-google:hover {
-    background-color: #357ae8;
+    background-color: #f6f8fb;
+    box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3);
+}
+.btn-google:focus-visible {
+    outline: 2px solid #1a73e8;
+    outline-offset: 2px;
+}
+.btn-google svg {
+    flex: none;
 }
 
 .btn-cancel {
-    background-color: #777;
+    background-color: #5f6368;
     color: white;
 }
 .btn-cancel:hover {
-    background-color: #666;
+    background-color: #4a4e52;
 }
 
 .btn-edit {
-    background-color: #337ab7;
+    background-color: #2a6496;
     color: white;
 }
 .btn-edit:hover {
-    background-color: #286090;
+    background-color: #1f4f78;
 }
 
 /* --- Formulários --- */
@@ -536,6 +607,27 @@ td.vazio {
     margin-top: 20px;
 }
 
+/* --- Telas de entrada, saída e erro: cartão estreito e centralizado --- */
+main.container.estreito {
+    max-width: 520px;
+}
+.entrada {
+    padding: 1rem 0;
+    text-align: center;
+}
+.entrada h1 {
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0.25rem;
+}
+.entrada-subtitulo {
+    margin-top: 0;
+    color: var(--text-muted);
+}
+.entrada .detalhe {
+    margin-top: 1rem;
+}
+
 /* --- Páginas Específicas --- */
 .login-box, .error-box {
     text-align: center;
@@ -676,5 +768,53 @@ td.vazio {
     .btn {
         white-space: normal;
         text-align: center;
+    }
+}
+
+/* --- Teclado e toque --- */
+@media (max-width: 900px) {
+    /* A caixinha que abre o menu fica invisível, mas continua alcançável pelo teclado. */
+    .menu-chave {
+        display: block;
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+    }
+    .nav-form {
+        display: block;
+    }
+    .nav-form button {
+        width: 100%;
+        padding: 12px 10px;
+        text-align: left;
+    }
+    .navbar-nav a {
+        padding: 12px 10px;
+    }
+}
+
+@media (max-width: 720px) {
+    /* Alvos de toque com pelo menos 44 px de altura. */
+    .btn,
+    .btn-pequeno {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+    }
+    input[type="text"],
+    input[type="email"],
+    input[type="search"],
+    input[type="date"],
+    select {
+        min-height: 44px;
+    }
+}
+
+/* Quem pediu menos movimento no sistema não recebe as transições. */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
     }
 }

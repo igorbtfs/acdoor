@@ -1,15 +1,18 @@
 {% extends "base.html" %}
-{% load socialaccount %}
+
+{% block titulo %}Entrar{% endblock %}
+{% block classe_main %}estreito{% endblock %}
 
 {% block content %}
-<div class="login-box">
-    <h1>Faça seu login</h1>
-    <p>Use sua conta institucional do Google (@restinga.ifrs.edu.br ou @aluno.restinga.ifrs.edu.br).</p>
+<div class="entrada">
+    <h1>Entrar no AC-Door</h1>
+    <p>Controle de acesso do laboratório de robótica do IFRS Campus Restinga.</p>
 
-    {# Enviar por POST leva direto ao Google, sem a tela intermediária "Continuar". #}
-    <form method="post" action="{% provider_login_url 'google' %}">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-google">Login com Google</button>
-    </form>
+    {% include 'account/_botao_google.html' %}
+
+    <p class="detalhe">
+        Use a sua conta institucional: <strong>@restinga.ifrs.edu.br</strong> ou
+        <strong>@aluno.restinga.ifrs.edu.br</strong>.
+    </p>
 </div>
 {% endblock %}

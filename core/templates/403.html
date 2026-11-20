@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Acesso não permitido{% endblock %}
+{% block classe_main %}estreito{% endblock %}
+
+{% block content %}
+<div class="entrada">
+    <h1>Acesso não permitido</h1>
+    <p>Sua conta não tem permissão para fazer isso.</p>
+    <p><a href="{% url 'home' %}" class="btn btn-primary">Voltar para o início</a></p>
+</div>
+{% endblock %}

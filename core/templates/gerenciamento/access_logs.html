@@ -1,4 +1,6 @@
 {% extends 'base.html' %}
+
+{% block titulo %}Logs de acesso{% endblock %}
 {% load acdoor %}
 
 {% block content %}
@@ -20,10 +22,10 @@
         <table class="tabela tabela-cartoes">
             <thead>
                 <tr>
-                    <th>Data e hora</th>
-                    <th>Usuário</th>
-                    <th>Cartão</th>
-                    <th>Resultado</th>
+                    <th scope="col">Data e hora</th>
+                    <th scope="col">Usuário</th>
+                    <th scope="col">Cartão</th>
+                    <th scope="col">Resultado</th>
                 </tr>
             </thead>
             <tbody>
