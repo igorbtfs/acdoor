@@ -20,7 +20,8 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
 from .acesso import com_orientacoes, situacao_do_aluno
-from .models import AccessLog, AlunoProfile, Orientacao, RegistroAuditoria, UnassignedUIDLog
+from .models import AccessLog, AlunoProfile, Orientacao, PedidoOrientador, RegistroAuditoria, UnassignedUIDLog
+from .orientadores import retirar_papel
 from .templatetags.acdoor import ha_quanto, uid_para
 
 User = get_user_model()
@@ -123,12 +124,59 @@ class LoginGoogleTests(TestCase):
         response = self.login_google('antigo@gmail.com', sub='sub-antigo')
         self.assertEqual(response.status_code, 403)
 
-    def test_professor_institucional(self):
+    def grupos_de(self, email):
+        return sorted(User.objects.get(email=email).groups.values_list('name', flat=True))
+
+    def pedido(self, email, status):
+        return PedidoOrientador.objects.create(email=email, origem='ADMIN', pedido_por_nome='Admin', status=status)
+
+    def test_servidor_do_campus_entra_sem_papel_de_orientador(self):
+        # O domínio dos servidores vale para todo o campus, não só para quem orienta.
         response = self.login_google('prof@restinga.ifrs.edu.br')
         self.assertEqual(response.status_code, 302)
         user = User.objects.get(email='prof@restinga.ifrs.edu.br')
-        self.assertEqual(list(user.groups.values_list('name', flat=True)), ['Professores'])
+        self.assertEqual(self.grupos_de(user.email), ['Servidores'])
         self.assertFalse(user.is_superuser or user.is_staff)
+
+    def test_servidor_com_pedido_aprovado_vira_orientador_no_login(self):
+        pedido = self.pedido('prof@restinga.ifrs.edu.br', 'APROVADO')  # aprovado antes de a pessoa ter conta
+        self.login_google('PROF@restinga.ifrs.edu.br')
+        self.assertEqual(self.grupos_de('prof@restinga.ifrs.edu.br'), ['Professores', 'Servidores'])
+        pedido.refresh_from_db()
+        self.assertEqual(pedido.usuario, User.objects.get())
+
+    def test_pedido_pendente_recusado_ou_revogado_nao_da_o_papel(self):
+        for status in ('PENDENTE', 'RECUSADO', 'REVOGADO'):
+            email = f'{status.lower()}@restinga.ifrs.edu.br'
+            self.pedido(email, status)
+            self.login_google(email)
+            self.assertEqual(self.grupos_de(email), ['Servidores'], status)
+
+    def test_aprovacao_so_vale_para_o_dominio_dos_servidores(self):
+        self.pedido('alguem@gmail.com', 'APROVADO')
+        self.pedido('2020000005@aluno.restinga.ifrs.edu.br', 'APROVADO')
+        self.assertEqual(self.login_google('alguem@gmail.com').status_code, 403)
+        self.login_google('2020000005@aluno.restinga.ifrs.edu.br')
+        self.assertEqual(self.grupos_de('2020000005@aluno.restinga.ifrs.edu.br'), ['Alunos'])
+
+    def test_quem_ja_era_orientador_continua_sendo(self):
+        # Contas criadas quando o domínio dava o papel direto não perdem o papel sozinhas.
+        antigo = criar_usuario('antiga@restinga.ifrs.edu.br', 'Professores')
+        SocialAccount.objects.create(user=antigo, provider='google', uid='sub-antiga')
+        self.login_google('antiga@restinga.ifrs.edu.br', sub='sub-antiga')
+        self.assertEqual(self.grupos_de('antiga@restinga.ifrs.edu.br'), ['Professores', 'Servidores'])
+
+    def test_papel_retirado_nao_volta_no_proximo_login(self):
+        email = 'prof@restinga.ifrs.edu.br'
+        self.pedido(email, 'APROVADO')
+        self.login_google(email)
+        admin = criar_usuario(ADMIN, is_superuser=True)
+
+        retirar_papel(User.objects.get(email=email), admin)
+        self.login_google(email)
+
+        self.assertEqual(self.grupos_de(email), ['Servidores'])
+        self.assertEqual(PedidoOrientador.objects.get().status, 'REVOGADO')
 
     def test_aluno_comum_nao_vira_admin(self):
         self.login_google('2020000001@aluno.restinga.ifrs.edu.br')
@@ -1001,6 +1049,228 @@ class ApiPortaTests(Cenario):
         self.assertEqual(response.json(), [
             {'nome_completo': 'Ana Souza', 'rfid_token': 'A1 B2 C3 D4', 'valido_ate': dia(12).isoformat()},
         ])
+
+
+# --- Quem pode ser orientador -------------------------------------------------
+
+class OrientadoresTests(Cenario):
+    def setUp(self):
+        super().setUp()
+        self.servidor = criar_usuario('carlos@restinga.ifrs.edu.br', 'Servidores', first_name='Carlos', last_name='Dias')
+
+    def assertBarrado(self, response):
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response['Location'].startswith('/?next='), response['Location'])
+
+    def eh_orientador(self, user):
+        return user.groups.filter(name='Professores').exists()
+
+    def pedir(self, justificativa='Coordeno o projeto de robótica'):
+        return self.client.post(reverse('solicitar_orientador'), {'justificativa': justificativa})
+
+    def decidir(self, pedido, decisao):
+        return self.client.post(reverse('decidir_pedido_orientador', args=[pedido.id]), {'decisao': decisao})
+
+    # -- o servidor pede --
+
+    def test_servidor_sem_papel_nao_gerencia_nada(self):
+        self.client.force_login(self.servidor)
+        for nome in PAGINAS_DE_GESTOR + PAGINAS_DE_ADMIN + ('indicar_orientador',):
+            self.assertBarrado(self.client.get(reverse(nome)))
+        self.assertBarrado(self.client.post(reverse('reivindicar_aluno', args=[self.aluno.id]), {'valido_ate': dia(10)}))
+        self.assertFalse(Orientacao.objects.exists())
+
+        home = self.client.get('/')
+        self.assertContains(home, 'Solicitar papel de orientador')
+        for texto in ('Meus bolsistas', 'Cartões pendentes', 'Meu acesso'):
+            self.assertNotContains(home, texto)
+
+    def test_servidor_pede_o_papel(self):
+        self.client.force_login(self.servidor)
+        self.pedir()
+
+        pedido = PedidoOrientador.objects.get()
+        self.assertEqual((pedido.email, pedido.usuario, pedido.origem, pedido.status),
+                         ('carlos@restinga.ifrs.edu.br', self.servidor, 'PROPRIO', 'PENDENTE'))
+        self.assertEqual(pedido.justificativa, 'Coordeno o projeto de robótica')
+        self.assertFalse(self.eh_orientador(self.servidor))  # pedir não dá o papel
+        self.assertEqual(acoes_auditadas(), ['ORIENTADOR_SOLICITADO'])
+
+        home = self.client.get('/')
+        self.assertContains(home, 'aguardando aprovação')
+        self.assertNotContains(home, 'Solicitar papel de orientador</button>')
+
+        self.pedir()  # pedir de novo não duplica
+        self.assertEqual(PedidoOrientador.objects.count(), 1)
+
+    def test_pedido_precisa_de_justificativa(self):
+        self.client.force_login(self.servidor)
+        self.pedir('')
+        self.assertFalse(PedidoOrientador.objects.exists())
+
+    def test_so_servidor_sem_papel_pode_pedir(self):
+        for user in (self.aluno, self.professor, self.admin):
+            self.client.force_login(user)
+            self.pedir()
+        self.assertFalse(PedidoOrientador.objects.exists())
+        self.client.logout()
+        self.assertIn('/accounts/login/', self.pedir()['Location'])
+
+    # -- o administrador decide --
+
+    def test_admin_aprova_e_o_servidor_vira_orientador(self):
+        self.client.force_login(self.servidor)
+        self.pedir()
+        pedido = PedidoOrientador.objects.get()
+
+        self.client.force_login(self.admin)
+        pagina = self.client.get(reverse('listar_bolsistas_orientadores'))
+        self.assertEqual(list(pagina.context['pendentes']), [pedido])
+        self.assertContains(pagina, 'Coordeno o projeto de robótica')
+        self.assertContains(pagina, '<span class="contador">1</span>')
+
+        self.decidir(pedido, 'aprovar')
+
+        pedido.refresh_from_db()
+        self.assertEqual((pedido.status, pedido.decidido_por), ('APROVADO', self.admin))
+        self.assertTrue(self.eh_orientador(self.servidor))
+        self.assertEqual(acoes_auditadas(), ['ORIENTADOR_SOLICITADO', 'ORIENTADOR_APROVADO'])
+
+        self.client.force_login(self.servidor)
+        self.assertEqual(self.client.get(reverse('alunos')).status_code, 200)
+
+    def test_admin_recusa_e_o_servidor_pode_pedir_de_novo(self):
+        self.client.force_login(self.servidor)
+        self.pedir()
+        pedido = PedidoOrientador.objects.get()
+
+        self.client.force_login(self.admin)
+        self.decidir(pedido, 'recusar')
+        pedido.refresh_from_db()
+        self.assertEqual(pedido.status, 'RECUSADO')
+        self.assertFalse(self.eh_orientador(self.servidor))
+
+        self.client.force_login(self.servidor)
+        self.assertContains(self.client.get('/'), 'foi recusado')
+        self.pedir('Agora com o número do edital')
+        self.assertEqual(PedidoOrientador.objects.filter(status='PENDENTE').count(), 1)
+
+    def test_so_o_admin_decide(self):
+        self.client.force_login(self.servidor)
+        self.pedir()
+        pedido = PedidoOrientador.objects.get()
+
+        for user in (self.servidor, self.professor, self.aluno):
+            self.client.force_login(user)
+            self.assertBarrado(self.decidir(pedido, 'aprovar'))
+        pedido.refresh_from_db()
+        self.assertEqual(pedido.status, 'PENDENTE')
+        self.assertFalse(self.eh_orientador(self.servidor))
+
+    def test_pedido_ja_decidido_nao_e_decidido_de_novo(self):
+        self.client.force_login(self.servidor)
+        self.pedir()
+        pedido = PedidoOrientador.objects.get()
+        self.client.force_login(self.admin)
+        self.decidir(pedido, 'recusar')
+        self.assertEqual(self.decidir(pedido, 'aprovar').status_code, 404)
+        self.assertFalse(self.eh_orientador(self.servidor))
+        self.assertEqual(self.client.get(reverse('decidir_pedido_orientador', args=[pedido.id])).status_code, 405)
+
+    # -- um orientador indica, o administrador autoriza direto --
+
+    def indicar(self, email, justificativa='Vai orientar bolsistas do projeto X'):
+        return self.client.post(reverse('indicar_orientador'), {'email': email, 'justificativa': justificativa})
+
+    def test_orientador_indica_colega_mas_quem_decide_e_o_admin(self):
+        self.client.force_login(self.professor)
+        self.indicar('NOVA@restinga.ifrs.edu.br')
+
+        pedido = PedidoOrientador.objects.get()
+        self.assertEqual((pedido.email, pedido.usuario, pedido.origem, pedido.status, pedido.pedido_por),
+                         ('nova@restinga.ifrs.edu.br', None, 'INDICACAO', 'PENDENTE', self.professor))
+        registro = RegistroAuditoria.objects.get()
+        self.assertEqual((registro.acao, registro.aluno, registro.aluno_nome),
+                         ('ORIENTADOR_INDICADO', None, 'nova@restinga.ifrs.edu.br'))
+
+        # a indicação de quem já tem conta não dá o papel sozinha
+        self.indicar(self.servidor.email)
+        self.assertFalse(self.eh_orientador(self.servidor))
+        self.assertEqual(PedidoOrientador.objects.get(email=self.servidor.email).usuario, self.servidor)
+
+    def test_indicacao_recusa_emails_invalidos(self):
+        self.client.force_login(self.professor)
+        self.indicar('alguem@gmail.com')                           # fora do campus
+        self.indicar('2020000001@aluno.restinga.ifrs.edu.br')      # aluno
+        self.indicar(self.outro_professor.email)                   # já é orientador
+        self.assertFalse(PedidoOrientador.objects.exists())
+
+        self.indicar('nova@restinga.ifrs.edu.br')
+        self.indicar('nova@restinga.ifrs.edu.br')                  # já tem pedido aguardando
+        self.assertEqual(PedidoOrientador.objects.count(), 1)
+
+    def test_admin_autoriza_direto(self):
+        self.client.force_login(self.admin)
+
+        # quem já tem conta vira orientador na hora
+        self.indicar(self.servidor.email)
+        self.assertTrue(self.eh_orientador(self.servidor))
+
+        # quem ainda não entrou fica aprovado, esperando o primeiro login
+        self.indicar('nova@restinga.ifrs.edu.br')
+        pedido = PedidoOrientador.objects.get(email='nova@restinga.ifrs.edu.br')
+        self.assertEqual((pedido.status, pedido.origem, pedido.decidido_por), ('APROVADO', 'ADMIN', self.admin))
+        pagina = self.client.get(reverse('listar_bolsistas_orientadores'))
+        self.assertEqual(list(pagina.context['aprovados_sem_conta']), [pedido])
+        self.assertEqual(acoes_auditadas(), ['ORIENTADOR_APROVADO', 'ORIENTADOR_APROVADO'])
+
+    # -- retirar o papel --
+
+    def test_retirar_mostra_quem_perde_o_acesso_antes_de_confirmar(self):
+        dar_cartao(self.aluno, 'A1 B2 C3 D4')
+        dar_cartao(self.aluno2, '11 22 33 44')
+        orientar(self.professor, self.aluno)            # só tem este orientador
+        orientar(self.professor, self.aluno2)
+        orientar(self.outro_professor, self.aluno2)     # tem outro orientador em dia
+
+        self.client.force_login(self.admin)
+        pagina = self.client.get(reverse('retirar_orientador', args=[self.professor.id]))
+        self.assertEqual(pagina.context['perdem'], [self.aluno])
+        self.assertEqual(pagina.context['total'], 2)
+        self.assertTrue(self.eh_orientador(self.professor))  # só olhar não retira
+
+        self.client.post(reverse('retirar_orientador', args=[self.professor.id]))
+
+        self.assertFalse(self.eh_orientador(self.professor))
+        self.assertFalse(situacao(self.aluno).liberado)
+        self.assertTrue(situacao(self.aluno2).liberado)
+        self.assertEqual(Orientacao.objects.filter(orientador=self.professor).count(), 2)  # continuam registradas
+        registro = RegistroAuditoria.objects.get()
+        self.assertEqual((registro.acao, registro.detalhe),
+                         ('ORIENTADOR_REVOGADO', '1 bolsista(s) ficaram sem orientador em dia'))
+
+    def test_retirar_revoga_o_pedido_aprovado(self):
+        self.client.force_login(self.admin)
+        self.indicar(self.servidor.email)
+        self.client.post(reverse('retirar_orientador', args=[self.servidor.id]))
+        self.assertFalse(self.eh_orientador(self.servidor))
+        self.assertEqual(PedidoOrientador.objects.get().status, 'REVOGADO')
+
+    def test_quem_esta_na_lista_do_servidor_nao_e_retirado_pela_tela(self):
+        self.client.force_login(self.admin)
+        with override_settings(PROFESSOR_EMAILS=[self.professor.email]):
+            pagina = self.client.get(reverse('listar_bolsistas_orientadores'))
+            self.assertContains(pagina, 'Lista PROFESSOR_EMAILS do servidor')
+            self.client.post(reverse('retirar_orientador', args=[self.professor.id]))
+        self.assertTrue(self.eh_orientador(self.professor))
+
+    def test_so_o_admin_retira_e_so_de_quem_e_orientador(self):
+        self.client.force_login(self.outro_professor)
+        self.assertBarrado(self.client.post(reverse('retirar_orientador', args=[self.professor.id])))
+        self.assertTrue(self.eh_orientador(self.professor))
+
+        self.client.force_login(self.admin)
+        self.assertEqual(self.client.post(reverse('retirar_orientador', args=[self.aluno.id])).status_code, 404)
 
 
 # --- Comando revogar_dominio --------------------------------------------------

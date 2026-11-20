@@ -78,13 +78,16 @@ def nome_de(user):
     return user.get_full_name() or user.username
 
 
-def registrar(autor, acao, aluno, detalhe=''):
-    """Grava na trilha de auditoria quem fez o quê com o acesso de qual aluno."""
+def registrar(autor, acao, aluno, detalhe='', nome=None):
+    """
+    Grava na trilha de auditoria quem fez o quê, e com quem. `aluno` é a pessoa
+    afetada; pode ser None quando ela ainda não tem conta (passe então `nome`).
+    """
     return RegistroAuditoria.objects.create(
         acao=acao,
         autor=autor,
         autor_nome=nome_de(autor),
         aluno=aluno,
-        aluno_nome=nome_de(aluno),
+        aluno_nome=nome or nome_de(aluno),
         detalhe=detalhe[:255],
     )

@@ -103,6 +103,11 @@ class RegistroAuditoria(models.Model):
         ('ALUNO_CADASTRADO', 'Aluno cadastrado'),
         ('ALUNO_EDITADO', 'Cadastro alterado'),
         ('ALUNO_EXCLUIDO', 'Aluno excluído'),
+        ('ORIENTADOR_SOLICITADO', 'Pedido para ser orientador'),
+        ('ORIENTADOR_INDICADO', 'Indicação de orientador'),
+        ('ORIENTADOR_APROVADO', 'Orientador aprovado'),
+        ('ORIENTADOR_RECUSADO', 'Pedido de orientador recusado'),
+        ('ORIENTADOR_REVOGADO', 'Papel de orientador retirado'),
     ]
 
     quando = models.DateTimeField(auto_now_add=True)
@@ -111,6 +116,8 @@ class RegistroAuditoria(models.Model):
     # conta do autor ou do aluno seja excluída depois.
     autor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
     autor_nome = models.CharField(max_length=200)
+    # "aluno" é a pessoa afetada pela ação. Quase sempre é um aluno; nas ações
+    # de orientador é o servidor que pediu, foi indicado, aprovado ou revogado.
     aluno = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
     aluno_nome = models.CharField(max_length=200)
     detalhe = models.CharField(max_length=255, blank=True)
@@ -122,6 +129,54 @@ class RegistroAuditoria(models.Model):
 
     def __str__(self):
         return f"{self.quando:%d/%m/%Y %H:%M} - {self.autor_nome}: {self.get_acao_display()} ({self.aluno_nome})"
+
+
+class PedidoOrientador(models.Model):
+    """
+    Pedido para que um servidor do campus passe a ser orientador, isto é, possa
+    conceder acesso ao laboratório. Entrar com o e-mail institucional não basta:
+    o administrador precisa aprovar. O pedido é feito por e-mail, e não por
+    usuário, porque um orientador pode indicar um colega que ainda não entrou
+    no portal; nesse caso a aprovação vale no primeiro login dele.
+    """
+    STATUS = [
+        ('PENDENTE', 'Aguardando aprovação'),
+        ('APROVADO', 'Aprovado'),
+        ('RECUSADO', 'Recusado'),
+        ('REVOGADO', 'Papel retirado'),
+    ]
+    ORIGEM = [
+        ('PROPRIO', 'Pedido pelo próprio servidor'),
+        ('INDICACAO', 'Indicado por um orientador'),
+        ('ADMIN', 'Autorizado direto pelo administrador'),
+    ]
+
+    email = models.EmailField()
+    usuario = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='pedidos_orientador',
+    )
+    origem = models.CharField(max_length=10, choices=ORIGEM)
+    pedido_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    pedido_por_nome = models.CharField(max_length=200)
+    justificativa = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=10, choices=STATUS, default='PENDENTE')
+    criado_em = models.DateTimeField(auto_now_add=True)
+    decidido_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    decidido_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Pedido de orientador"
+        verbose_name_plural = "Pedidos de orientador"
+        ordering = ['-criado_em', '-id']
+        constraints = [
+            # Só um pedido aguardando por pessoa.
+            models.UniqueConstraint(
+                fields=['email'], condition=models.Q(status='PENDENTE'), name='pedido_orientador_pendente_unico',
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.email} ({self.get_status_display()})"
 
 
 class AccessLog(models.Model):

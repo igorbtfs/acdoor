@@ -22,4 +22,10 @@ urlpatterns = [
     path('logs-de-acesso/', views.access_logs_view, name='access_logs'),
     path('painel-bolsistas/', views.listar_bolsistas_orientadores, name='listar_bolsistas_orientadores'),
     path('auditoria/', views.auditoria, name='auditoria'),
+
+    # Quem pode ser orientador: pedido, indicação e decisão do administrador
+    path('orientadores/solicitar/', views.solicitar_orientador, name='solicitar_orientador'),
+    path('orientadores/indicar/', views.indicar_orientador, name='indicar_orientador'),
+    path('orientadores/pedidos/<int:pedido_id>/decidir/', views.decidir_pedido_orientador, name='decidir_pedido_orientador'),
+    path('orientadores/<int:user_id>/retirar/', views.retirar_orientador, name='retirar_orientador'),
 ]

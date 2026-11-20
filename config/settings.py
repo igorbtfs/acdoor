@@ -244,8 +244,10 @@ SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 # Pode ser de qualquer domínio: só o e-mail exato entra, não o domínio inteiro.
 ADMIN_EMAILS = [email.lower() for email in env_list('ADMIN_EMAILS')]
 
-# E-mails avulsos que entram como professores, para quem não é do domínio do
+# E-mails avulsos que entram como orientadores, para quem não é do domínio do
 # campus (ex.: servidor de outro campus). Também vale só o e-mail exato.
+# Servidores do próprio campus (@restinga.ifrs.edu.br) entram sem papel nenhum e
+# viram orientadores por aprovação do administrador no portal, não por esta lista.
 #   PROFESSOR_EMAILS=fulano@outrocampus.ifrs.edu.br
 PROFESSOR_EMAILS = [email.lower() for email in env_list('PROFESSOR_EMAILS')]
 # Tirar um e-mail destas listas impede o próximo login, mas não desfaz o papel

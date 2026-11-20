@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block titulo %}AC-Door - Controle de Acesso{% endblock %}</title>
     {# O ?v= força o navegador (e a Cloudflare) a buscar o CSS novo; aumente ao mudar o arquivo. #}
-    <link rel="stylesheet" href="{% static 'core/css/styles.css' %}?v=3">
+    <link rel="stylesheet" href="{% static 'core/css/styles.css' %}?v=4">
 </head>
 <body>
     {% with pagina=request.resolver_match.url_name %}
@@ -32,7 +32,9 @@
                     {% endif %}
 
                     {% if eh_admin %}
-                        <a href="{% url 'listar_bolsistas_orientadores' %}" {% if pagina == 'listar_bolsistas_orientadores' %}class="ativo"{% endif %}>Orientadores</a>
+                        <a href="{% url 'listar_bolsistas_orientadores' %}" {% if pagina == 'listar_bolsistas_orientadores' or pagina == 'retirar_orientador' %}class="ativo"{% endif %}>
+                            Orientadores{% if pedidos_orientador_qtd %} <span class="contador">{{ pedidos_orientador_qtd }}</span>{% endif %}
+                        </a>
                         <a href="{% url 'auditoria' %}" {% if pagina == 'auditoria' %}class="ativo"{% endif %}>Auditoria</a>
                         <a href="{% url 'admin:index' %}">Admin</a>
                     {% endif %}

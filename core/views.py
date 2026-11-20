@@ -16,8 +16,12 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from .acesso import cartao_de, com_orientacoes, nome_de, registrar, situacao_do_aluno, validade_padrao
-from .forms import CadastrarAlunoForm, EditAlunoForm, ValidadeForm
-from .models import AccessLog, AlunoProfile, Orientacao, RegistroAuditoria, UnassignedUIDLog
+from .forms import CadastrarAlunoForm, EditAlunoForm, IndicarOrientadorForm, PedidoOrientadorForm, ValidadeForm
+from .models import AccessLog, AlunoProfile, Orientacao, PedidoOrientador, RegistroAuditoria, UnassignedUIDLog
+from .orientadores import (
+    GRUPO_ORIENTADORES, GRUPO_SERVIDORES, alunos_que_perdem_acesso, aprovar_pedido, criar_pedido,
+    na_lista_do_servidor, nome_do_pedido, recusar_pedido, retirar_papel, tem_pedido_pendente,
+)
 from .permissions import eh_admin, pode_gerenciar, pode_gerenciar_aluno
 
 User = get_user_model()
@@ -105,6 +109,15 @@ def erros_do_form(form):
     return ' '.join(erro for erros in form.errors.values() for erro in erros)
 
 
+def eh_servidor_sem_papel(user):
+    """Entrou com o e-mail de servidor do campus, mas (ainda) não é orientador nem administrador."""
+    return (
+        user.is_authenticated
+        and not pode_gerenciar(user)
+        and user.groups.filter(name=GRUPO_SERVIDORES).exists()
+    )
+
+
 # --- Página inicial ----------------------------------------------------------
 
 def home(request):
@@ -133,6 +146,14 @@ def home(request):
                 'vencidas': minhas.filter(valido_ate__lt=hoje).count(),
                 'acessos_hoje': AccessLog.objects.filter(timestamp__date=hoje, status='GRANTED').count(),
             }
+
+        # Servidor do campus que ainda não é orientador: pode pedir o papel.
+        elif eh_servidor_sem_papel(user):
+            contexto.update({
+                'sou_servidor': True,
+                'meu_pedido': PedidoOrientador.objects.filter(email__iexact=user.email).first(),
+                'pedido_form': PedidoOrientadorForm(),
+            })
 
     return render(request, 'home.html', contexto)
 
@@ -495,11 +516,126 @@ def listar_bolsistas_orientadores(request):
         .order_by('orientador__first_name', 'orientador__last_name', 'orientador_id',
                   'aluno__first_name', 'aluno__last_name')
     )
+    # Quem tem o papel hoje, e o que acontece se ele for retirado.
+    orientadores = []
+    for pessoa in User.objects.filter(groups__name=GRUPO_ORIENTADORES).distinct().order_by('first_name', 'last_name'):
+        orientadores.append({
+            'pessoa': pessoa,
+            'bolsistas': Orientacao.objects.filter(orientador=pessoa).count(),
+            'pedido': PedidoOrientador.objects.filter(email__iexact=pessoa.email, status='APROVADO').first(),
+            'na_lista': na_lista_do_servidor(pessoa.email),
+        })
+
     context = {
+        'pendentes': PedidoOrientador.objects.filter(status='PENDENTE').select_related('usuario'),
+        'aprovados_sem_conta': PedidoOrientador.objects.filter(status='APROVADO', usuario__isnull=True),
+        'orientadores': orientadores,
         'orientacoes': orientacoes,
         'validade_padrao': validade_padrao(),
     }
     return render(request, 'gerenciamento/orientadores.html', context)
+
+
+# --- Quem pode ser orientador ------------------------------------------------
+
+@login_required
+@require_POST
+def solicitar_orientador(request):
+    """Um servidor do campus pede o papel de orientador. Quem decide é o administrador."""
+    if not eh_servidor_sem_papel(request.user):
+        messages.error(request, "Só servidores do campus que ainda não são orientadores podem fazer esse pedido.")
+        return redirect('home')
+
+    if tem_pedido_pendente(request.user.email):
+        messages.info(request, "Você já tem um pedido aguardando aprovação.")
+        return redirect('home')
+
+    form = PedidoOrientadorForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "Diga em poucas palavras o projeto, edital ou motivo do pedido.")
+        return redirect('home')
+
+    criar_pedido(request.user.email, 'PROPRIO', request.user, form.cleaned_data['justificativa'])
+    registrar(request.user, 'ORIENTADOR_SOLICITADO', request.user, form.cleaned_data['justificativa'])
+    messages.success(request, "Pedido enviado. O administrador do laboratório vai analisar.")
+    return redirect('home')
+
+
+@gestor
+def indicar_orientador(request):
+    """
+    Um orientador indica um colega (o pedido fica aguardando o administrador).
+    O administrador usa a mesma tela para autorizar um servidor direto.
+    """
+    admin = eh_admin(request.user)
+    form = IndicarOrientadorForm(request.POST or None)
+
+    if request.method == 'POST' and form.is_valid():
+        email = form.cleaned_data['email']
+        justificativa = form.cleaned_data['justificativa']
+        pedido = criar_pedido(email, 'ADMIN' if admin else 'INDICACAO', request.user, justificativa)
+
+        if admin:
+            aprovar_pedido(pedido, request.user)
+            if pedido.usuario:
+                messages.success(request, f"{nome_do_pedido(pedido)} agora é orientador.")
+            else:
+                messages.success(request, f"{email} autorizado. O papel de orientador vale a partir do primeiro login.")
+            return redirect('listar_bolsistas_orientadores')
+
+        registrar(request.user, 'ORIENTADOR_INDICADO', pedido.usuario, justificativa, nome=nome_do_pedido(pedido))
+        messages.success(request, f"Indicação de {email} enviada. O administrador do laboratório vai analisar.")
+        return redirect('home')
+
+    return render(request, 'gerenciamento/indicar_orientador.html', {'form': form})
+
+
+@administrador
+@require_POST
+def decidir_pedido_orientador(request, pedido_id):
+    pedido = get_object_or_404(PedidoOrientador.objects.select_related('usuario'), id=pedido_id, status='PENDENTE')
+
+    if request.POST.get('decisao') == 'aprovar':
+        aprovar_pedido(pedido, request.user)
+        if pedido.usuario:
+            messages.success(request, f"{nome_do_pedido(pedido)} agora é orientador.")
+        else:
+            messages.success(request, f"{pedido.email} aprovado. O papel vale a partir do primeiro login.")
+    elif request.POST.get('decisao') == 'recusar':
+        recusar_pedido(pedido, request.user)
+        messages.success(request, f"Pedido de {nome_do_pedido(pedido)} recusado.")
+    else:
+        messages.error(request, "Escolha aprovar ou recusar.")
+
+    return redirect('listar_bolsistas_orientadores')
+
+
+@administrador
+def retirar_orientador(request, user_id):
+    """Retira o papel de orientador, mostrando antes quais bolsistas ficam sem acesso."""
+    pessoa = get_object_or_404(User.objects.filter(groups__name=GRUPO_ORIENTADORES), id=user_id)
+
+    if na_lista_do_servidor(pessoa.email):
+        messages.error(
+            request,
+            f"{nome_de(pessoa)} está na lista PROFESSOR_EMAILS do servidor, que devolve o papel a cada login. "
+            "Tire o e-mail de lá primeiro."
+        )
+        return redirect('listar_bolsistas_orientadores')
+
+    if request.method == 'POST':
+        afetados = retirar_papel(pessoa, request.user)
+        messages.success(
+            request,
+            f"{nome_de(pessoa)} não é mais orientador. {afetados} bolsista(s) ficaram sem orientador em dia."
+        )
+        return redirect('listar_bolsistas_orientadores')
+
+    return render(request, 'gerenciamento/confirmar_retirada.html', {
+        'pessoa': pessoa,
+        'perdem': alunos_que_perdem_acesso(pessoa),
+        'total': Orientacao.objects.filter(orientador=pessoa).count(),
+    })
 
 
 @administrador

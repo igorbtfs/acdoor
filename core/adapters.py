@@ -6,10 +6,14 @@ from django.conf import settings
 from django.contrib.auth.models import Group
 from django.shortcuts import render
 
+from .orientadores import DOMINIO_SERVIDORES, GRUPO_ORIENTADORES, GRUPO_SERVIDORES, email_aprovado, vincular_pedidos
+
 
 # Domínios institucionais aceitos no login e o grupo que cada um recebe.
+# O domínio dos servidores só dá entrada no portal: ser orientador depende de
+# um pedido aprovado pelo administrador (veja core/orientadores.py).
 GRUPO_POR_DOMINIO = {
-    'restinga.ifrs.edu.br': 'Professores',
+    DOMINIO_SERVIDORES: GRUPO_SERVIDORES,
     'aluno.restinga.ifrs.edu.br': 'Alunos',
 }
 
@@ -29,18 +33,26 @@ def email_verificado(sociallogin):
 
 def papel_do_email(email):
     """
-    Decide se um e-mail pode entrar e com qual papel. Retorna (pode_entrar, grupo, admin).
+    Decide se um e-mail pode entrar e com quais papéis. Retorna (pode_entrar, grupos, admin).
 
-    Além dos domínios institucionais, entram os e-mails listados um a um no
-    .env: ADMIN_EMAILS (administradores) e PROFESSOR_EMAILS (professores de
-    fora do domínio do campus). Um e-mail fora das listas e dos domínios não
-    entra, mesmo que seja do mesmo provedor de alguém que está na lista.
+    Entram os domínios institucionais e os e-mails listados um a um no .env:
+    ADMIN_EMAILS (administradores) e PROFESSOR_EMAILS (orientadores de fora do
+    domínio do campus). Um e-mail fora das listas e dos domínios não entra,
+    mesmo que seja do mesmo provedor de alguém que está na lista.
+
+    Um servidor do campus só recebe o papel de orientador se tiver um pedido
+    aprovado pelo administrador.
     """
     admin = email in settings.ADMIN_EMAILS
-    grupo = GRUPO_POR_DOMINIO.get(email.rpartition('@')[2])
-    if email in settings.PROFESSOR_EMAILS:
-        grupo = 'Professores'
-    return bool(email) and (admin or grupo is not None), grupo, admin
+    dominio = email.rpartition('@')[2]
+
+    grupos = []
+    if dominio in GRUPO_POR_DOMINIO:
+        grupos.append(GRUPO_POR_DOMINIO[dominio])
+    if email in settings.PROFESSOR_EMAILS or (dominio == DOMINIO_SERVIDORES and email_aprovado(email)):
+        grupos.append(GRUPO_ORIENTADORES)
+
+    return bool(email) and (admin or bool(grupos)), grupos, admin
 
 
 def promover_admin(user):
@@ -52,14 +64,16 @@ def promover_admin(user):
         user.save(update_fields=campos)
 
 
-def aplicar_papel(user, grupo, admin):
-    """Põe o usuário no grupo do papel dele e, se for o caso, torna administrador."""
-    if grupo:
+def aplicar_papel(user, email, grupos, admin):
+    """Põe o usuário nos grupos do papel dele e, se for o caso, torna administrador."""
+    for nome in grupos:
         # Pega o objeto do grupo ou cria se não existir
-        group, created = Group.objects.get_or_create(name=grupo)
+        group, created = Group.objects.get_or_create(name=nome)
         user.groups.add(group)
     if admin:
         promover_admin(user)
+    # Pedidos feitos para este e-mail antes de a pessoa ter conta passam a apontar para ela.
+    vincular_pedidos(user, email)
 
 
 class MySocialAccountAdapter(DefaultSocialAccountAdapter):
@@ -70,7 +84,7 @@ class MySocialAccountAdapter(DefaultSocialAccountAdapter):
         bem-sucedida para executar validações personalizadas.
         """
         email = email_verificado(sociallogin)
-        pode_entrar, grupo, admin = papel_do_email(email)
+        pode_entrar, grupos, admin = papel_do_email(email)
 
         # Se o e-mail não for de um domínio permitido nem estiver nas listas,
         # interrompe o login e exibe uma página de erro. Vale também para quem
@@ -81,10 +95,10 @@ class MySocialAccountAdapter(DefaultSocialAccountAdapter):
             }, status=403))
 
         # Usuário que já existe no sistema: confere o papel a cada login, para
-        # que um e-mail acrescentado às listas depois passe a valer.
+        # que um e-mail acrescentado às listas, ou um pedido aprovado, passe a valer.
         # (Usuários novos são tratados em save_user.)
         if sociallogin.is_existing:
-            aplicar_papel(sociallogin.user, grupo, admin)
+            aplicar_papel(sociallogin.user, email, grupos, admin)
 
     def save_user(self, request, sociallogin, form=None):
         """
@@ -94,7 +108,8 @@ class MySocialAccountAdapter(DefaultSocialAccountAdapter):
         # Primeiro, salva o usuário usando o método padrão
         user = super().save_user(request, sociallogin, form)
 
-        _, grupo, admin = papel_do_email(email_verificado(sociallogin))
-        aplicar_papel(user, grupo, admin)
+        email = email_verificado(sociallogin)
+        _, grupos, admin = papel_do_email(email)
+        aplicar_papel(user, email, grupos, admin)
 
         return user

@@ -36,6 +36,10 @@
                     <span class="rotulo">entradas no laboratório hoje</span>
                 </a>
             </div>
+            <p class="detalhe">
+                Um colega vai orientar bolsistas no laboratório?
+                <a href="{% url 'indicar_orientador' %}">{% if eh_admin %}Autorize um servidor{% else %}Indique um orientador{% endif %}</a>.
+            </p>
         {% endif %}
 
         {% if sou_aluno %}
@@ -90,6 +94,33 @@
                     </tbody>
                 </table>
             </div>
+        {% elif sou_servidor %}
+            <h2>Papel de orientador</h2>
+            <p class="ajuda">
+                Você entrou como servidor do campus. Para incluir bolsistas e liberar o acesso deles ao laboratório,
+                é preciso que o administrador aprove você como orientador.
+            </p>
+
+            {% if meu_pedido.status == 'PENDENTE' %}
+                <div class="aviso">
+                    Seu pedido de {{ meu_pedido.criado_em|date:"d/m/Y" }} está aguardando aprovação.
+                    {% if meu_pedido.origem == 'INDICACAO' %}Você foi indicado por {{ meu_pedido.pedido_por_nome }}.{% endif %}
+                </div>
+            {% else %}
+                {% if meu_pedido.status == 'RECUSADO' %}
+                    <div class="aviso">Seu pedido anterior foi recusado em {{ meu_pedido.decidido_em|date:"d/m/Y" }}. Você pode pedir de novo.</div>
+                {% elif meu_pedido.status == 'REVOGADO' %}
+                    <div class="aviso">Seu papel de orientador foi retirado em {{ meu_pedido.decidido_em|date:"d/m/Y" }}. Você pode pedir de novo.</div>
+                {% endif %}
+                <form method="post" action="{% url 'solicitar_orientador' %}" class="formulario">
+                    {% csrf_token %}
+                    <div class="campo">
+                        {{ pedido_form.justificativa.label_tag }}
+                        {{ pedido_form.justificativa }}
+                    </div>
+                    <button type="submit" class="btn btn-primary">Solicitar papel de orientador</button>
+                </form>
+            {% endif %}
         {% elif not resumo %}
             <p>Sua conta não tem nenhuma função neste portal. Fale com o administrador do laboratório.</p>
         {% endif %}

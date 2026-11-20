@@ -1,6 +1,6 @@
 # core/admin.py
 from django.contrib import admin
-from .models import AlunoProfile, AccessLog, Orientacao, RegistroAuditoria, UnassignedUIDLog
+from .models import AlunoProfile, AccessLog, Orientacao, PedidoOrientador, RegistroAuditoria, UnassignedUIDLog
 
 class AccessLogAdmin(admin.ModelAdmin):
     list_display = ('timestamp', 'uid', 'status', 'user')
@@ -39,3 +39,10 @@ admin.site.register(AccessLog, AccessLogAdmin)
 admin.site.register(UnassignedUIDLog, UnassignedUIDLogAdmin)
 admin.site.register(Orientacao, OrientacaoAdmin)
 admin.site.register(RegistroAuditoria, RegistroAuditoriaAdmin)
+
+
+@admin.register(PedidoOrientador)
+class PedidoOrientadorAdmin(admin.ModelAdmin):
+    list_display = ('email', 'status', 'origem', 'pedido_por_nome', 'criado_em', 'decidido_por', 'decidido_em')
+    list_filter = ('status', 'origem')
+    search_fields = ('email', 'pedido_por_nome', 'justificativa')

@@ -130,6 +130,20 @@ h2 {
     font-size: 1.25em;
 }
 
+h3 {
+    margin-top: 1.5rem;
+    font-size: 1.05em;
+}
+
+h3 .detalhe {
+    display: inline;
+    margin-left: 6px;
+}
+
+.aviso ul {
+    margin: 8px 0 0 0;
+}
+
 .ajuda {
     color: var(--text-muted);
     max-width: 75ch;

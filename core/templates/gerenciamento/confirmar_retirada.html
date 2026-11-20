@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Retirar o papel de orientador</h1>
+
+    <dl class="ficha">
+        <div>
+            <dt>Orientador</dt>
+            <dd>
+                <strong>{{ pessoa.get_full_name|default:pessoa.username }}</strong>
+                <small class="detalhe">{{ pessoa.email }}</small>
+            </dd>
+        </div>
+        <div>
+            <dt>Bolsistas vinculados</dt>
+            <dd>{{ total }}</dd>
+        </div>
+    </dl>
+
+    {% if perdem %}
+        <div class="aviso">
+            <strong>{{ perdem|length }} bolsista{{ perdem|length|pluralize }} {{ perdem|length|pluralize:"fica,ficam" }} sem acesso à porta</strong>,
+            porque não {{ perdem|length|pluralize:"tem,têm" }} outro orientador com a validade em dia:
+            <ul>
+                {% for aluno in perdem %}
+                    <li>{{ aluno.get_full_name|default:aluno.username }} ({{ aluno.email }})</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% else %}
+        <p class="ajuda">Nenhum bolsista perde o acesso à porta com esta retirada.</p>
+    {% endif %}
+
+    <p class="ajuda">
+        As orientações continuam registradas, mas deixam de valer. Se esta pessoa voltar a ser orientadora,
+        elas voltam a valer até a data de validade de cada uma.
+    </p>
+
+    <form method="post" class="acoes">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Retirar o papel</button>
+        <a href="{% url 'listar_bolsistas_orientadores' %}" class="btn btn-cancel">Cancelar</a>
+    </form>
+{% endblock %}

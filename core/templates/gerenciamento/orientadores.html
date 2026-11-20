@@ -2,15 +2,127 @@
 
 {% block content %}
     <h1>Orientadores</h1>
-    <p class="ajuda">Quem responde pelo acesso de cada aluno, e até quando. Como administrador, você pode ajustar a validade ou retirar qualquer orientação.</p>
+    <p class="ajuda">
+        Entrar no portal com o e-mail de servidor do campus não dá o papel de orientador: ele depende da sua aprovação.
+        Só um orientador consegue incluir bolsistas e liberar o acesso deles ao laboratório.
+    </p>
+
+    <h2>Pedidos aguardando aprovação</h2>
+    {% if pendentes %}
+        <div class="tabela-wrap">
+            <table class="tabela tabela-cartoes">
+                <thead>
+                    <tr>
+                        <th>Servidor</th>
+                        <th>Origem</th>
+                        <th>Projeto, edital ou motivo</th>
+                        <th>Pedido em</th>
+                        <th>Decisão</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pedido in pendentes %}
+                    <tr>
+                        <td data-label="Servidor">
+                            {% if pedido.usuario %}
+                                <strong>{{ pedido.usuario.get_full_name|default:pedido.usuario.username }}</strong>
+                                <small class="detalhe">{{ pedido.email }}</small>
+                            {% else %}
+                                <strong>{{ pedido.email }}</strong>
+                                <small class="detalhe">ainda não entrou no portal</small>
+                            {% endif %}
+                        </td>
+                        <td data-label="Origem">
+                            {% if pedido.origem == 'INDICACAO' %}
+                                Indicado por {{ pedido.pedido_por_nome }}
+                            {% else %}
+                                Pedido pelo próprio servidor
+                            {% endif %}
+                        </td>
+                        <td data-label="Motivo">{{ pedido.justificativa|default:"—" }}</td>
+                        <td data-label="Pedido em">{{ pedido.criado_em|date:"d/m/Y H:i" }}</td>
+                        <td data-label="Decisão">
+                            <form method="post" action="{% url 'decidir_pedido_orientador' pedido.id %}" class="acoes">
+                                {% csrf_token %}
+                                <button type="submit" name="decisao" value="aprovar" class="btn btn-primary btn-pequeno">Aprovar</button>
+                                <button type="submit" name="decisao" value="recusar" class="btn btn-danger btn-pequeno">Recusar</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="detalhe">Nenhum pedido aguardando.</p>
+    {% endif %}
+
+    <p><a href="{% url 'indicar_orientador' %}" class="btn btn-secundario">Autorizar um servidor</a></p>
+
+    <h2>Quem é orientador hoje</h2>
+    <div class="tabela-wrap">
+        <table class="tabela tabela-cartoes">
+            <thead>
+                <tr>
+                    <th>Orientador</th>
+                    <th>Como recebeu o papel</th>
+                    <th>Bolsistas</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for linha in orientadores %}
+                <tr>
+                    <td data-label="Orientador">
+                        <strong>{{ linha.pessoa.get_full_name|default:linha.pessoa.username }}</strong>
+                        <small class="detalhe">{{ linha.pessoa.email }}</small>
+                        {% if not linha.pessoa.is_active %}<span class="selo selo-erro">conta desativada</span>{% endif %}
+                    </td>
+                    <td data-label="Como recebeu o papel">
+                        {% if linha.na_lista %}
+                            Lista PROFESSOR_EMAILS do servidor
+                        {% elif linha.pedido %}
+                            Aprovado por {{ linha.pedido.decidido_por.get_full_name|default:linha.pedido.decidido_por.username|default:"administrador" }}
+                            em {{ linha.pedido.decidido_em|date:"d/m/Y" }}
+                            <small class="detalhe">{{ linha.pedido.justificativa }}</small>
+                        {% else %}
+                            Já era orientador antes de existir a aprovação
+                        {% endif %}
+                    </td>
+                    <td data-label="Bolsistas">{{ linha.bolsistas }}</td>
+                    <td data-label="Ações">
+                        {% if linha.na_lista %}
+                            <small class="detalhe">Para retirar, tire o e-mail de PROFESSOR_EMAILS no servidor.</small>
+                        {% else %}
+                            <a href="{% url 'retirar_orientador' linha.pessoa.id %}" class="btn btn-danger btn-pequeno">Retirar papel</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="vazio">Ninguém tem o papel de orientador ainda.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if aprovados_sem_conta %}
+        <p class="detalhe">
+            Aprovados que ainda não entraram no portal (viram orientadores no primeiro login):
+            {% for pedido in aprovados_sem_conta %}{{ pedido.email }}{% if not forloop.last %}, {% endif %}{% endfor %}.
+        </p>
+    {% endif %}
+
+    <h2>Bolsistas de cada orientador</h2>
+    <p class="ajuda">Como administrador, você pode ajustar a validade ou retirar qualquer orientação.</p>
 
     {% regroup orientacoes by orientador as grupos %}
     {% for grupo in grupos %}
-        <h2>
+        <h3>
             {{ grupo.grouper.get_full_name|default:grupo.grouper.username }}
             <small class="detalhe">{{ grupo.grouper.email }}</small>
-            {% if not grupo.grouper.is_active %}<span class="selo selo-erro">conta desativada</span>{% endif %}
-        </h2>
+        </h3>
         <div class="tabela-wrap">
             <table class="tabela tabela-cartoes">
                 <thead>
@@ -35,7 +147,7 @@
                                 <span class="selo selo-erro">Vencida</span>
                             {% else %}
                                 <span class="selo selo-erro">Não vale</span>
-                                <small class="detalhe">orientador sem permissão, desativado ou o próprio aluno</small>
+                                <small class="detalhe">orientador sem o papel, desativado ou o próprio aluno</small>
                             {% endif %}
                         </td>
                         <td data-label="Válido até">
@@ -60,9 +172,6 @@
             </table>
         </div>
     {% empty %}
-        <div class="vazio-box">
-            <strong>Nenhuma orientação cadastrada.</strong>
-            <p>As orientações aparecem aqui quando um professor reivindica um aluno.</p>
-        </div>
+        <p class="detalhe">Nenhuma orientação cadastrada. Elas aparecem aqui quando um orientador reivindica um aluno.</p>
     {% endfor %}
 {% endblock %}

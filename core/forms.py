@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 
 from .acesso import validade_maxima, validade_padrao
 from .models import CURSO_CHOICES, AlunoProfile
+from .orientadores import DOMINIO_SERVIDORES, eh_orientador, email_aprovado, tem_pedido_pendente
 from django.utils import timezone
 
 DOMINIO_ALUNOS = 'aluno.restinga.ifrs.edu.br'
@@ -33,6 +34,42 @@ def validar_validade(data):
 def normalizar_uid(texto):
     """Mesmo formato enviado pelo ESP32: maiúsculas, bytes separados por um espaço."""
     return ' '.join((texto or '').upper().split())
+
+
+class PedidoOrientadorForm(forms.Form):
+    """O servidor pede para ser orientador e diz por quê, para o administrador conferir."""
+    justificativa = forms.CharField(
+        label="Projeto, edital ou motivo",
+        max_length=255,
+        widget=forms.TextInput(attrs={'placeholder': 'Ex.: coordeno o projeto de extensão de robótica (edital 12/2026)'}),
+    )
+
+
+class IndicarOrientadorForm(forms.Form):
+    """Um orientador indica um colega; o administrador autoriza um servidor direto."""
+    email = forms.EmailField(
+        label="E-mail institucional do servidor",
+        widget=forms.EmailInput(attrs={'placeholder': f'nome.sobrenome@{DOMINIO_SERVIDORES}'}),
+    )
+    justificativa = forms.CharField(
+        label="Projeto, edital ou motivo",
+        max_length=255,
+        widget=forms.TextInput(attrs={'placeholder': 'Ex.: vai orientar bolsistas do projeto X'}),
+    )
+
+    def clean_email(self):
+        email = self.cleaned_data['email'].lower()
+        if email.split('@')[1] != DOMINIO_SERVIDORES:
+            raise ValidationError(f"O e-mail deve ser de um servidor do campus (@{DOMINIO_SERVIDORES}).")
+
+        usuario = User.objects.filter(email__iexact=email).first()
+        if usuario and eh_orientador(usuario):
+            raise ValidationError("Essa pessoa já é orientadora.")
+        if email_aprovado(email):
+            raise ValidationError("Esse e-mail já está aprovado; o papel vale no próximo login da pessoa.")
+        if tem_pedido_pendente(email):
+            raise ValidationError("Já existe um pedido aguardando aprovação para esse e-mail.")
+        return email
 
 
 class ValidadeForm(forms.Form):
