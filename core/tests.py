@@ -82,7 +82,11 @@ class Cenario(TestCase):
 
 # --- Login pelo Google --------------------------------------------------------
 
-@override_settings(SOCIALACCOUNT_PROVIDERS=GOOGLE_FAKE, ADMIN_EMAILS=[ADMIN])
+PROFESSOR_DE_FORA = 'fulano@outrocampus.ifrs.edu.br'
+ADMIN_PESSOAL = 'dono@gmail.com'
+
+
+@override_settings(SOCIALACCOUNT_PROVIDERS=GOOGLE_FAKE, ADMIN_EMAILS=[ADMIN], PROFESSOR_EMAILS=[])
 class LoginGoogleTests(TestCase):
     """Exercita o fluxo real do allauth, simulando apenas a resposta do Google."""
 
@@ -138,6 +142,53 @@ class LoginGoogleTests(TestCase):
         user = User.objects.get(email=ADMIN)
         self.assertTrue(user.is_superuser and user.is_staff)
         self.assertFalse(user.has_usable_password())
+
+    @override_settings(ADMIN_EMAILS=[ADMIN, ADMIN_PESSOAL])
+    def test_email_pessoal_na_lista_entra_como_administrador(self):
+        self.assertEqual(self.login_google(ADMIN_PESSOAL.upper()).status_code, 302)
+        user = User.objects.get(email__iexact=ADMIN_PESSOAL)
+        self.assertTrue(user.is_superuser and user.is_staff)
+        self.assertEqual(user.groups.count(), 0)  # não vira aluno nem professor por causa do domínio
+        # o resto do provedor continua barrado: vale o e-mail exato, não o domínio
+        self.assertEqual(self.login_google('outro@gmail.com').status_code, 403)
+        self.assertEqual(self.login_google('dono@gmail.com.br').status_code, 403)
+        self.assertEqual(User.objects.count(), 1)
+
+    @override_settings(ADMIN_EMAILS=[ADMIN, ADMIN_PESSOAL])
+    def test_email_da_lista_nao_verificado_pelo_google_nao_entra(self):
+        self.assertEqual(self.login_google(ADMIN_PESSOAL, verificado=False).status_code, 403)
+        self.assertFalse(User.objects.exists())
+
+    @override_settings(PROFESSOR_EMAILS=[PROFESSOR_DE_FORA])
+    def test_email_de_outro_campus_na_lista_entra_como_professor(self):
+        self.assertEqual(self.login_google(PROFESSOR_DE_FORA).status_code, 302)
+        user = User.objects.get(email=PROFESSOR_DE_FORA)
+        self.assertEqual(list(user.groups.values_list('name', flat=True)), ['Professores'])
+        self.assertFalse(user.is_superuser or user.is_staff)
+        # colegas do mesmo domínio que não estão na lista não entram
+        self.assertEqual(self.login_google('beltrano@outrocampus.ifrs.edu.br').status_code, 403)
+        self.assertEqual(User.objects.count(), 1)
+
+    def test_sem_as_listas_esses_emails_nao_entram(self):
+        self.assertEqual(self.login_google(PROFESSOR_DE_FORA).status_code, 403)
+        self.assertEqual(self.login_google(ADMIN_PESSOAL).status_code, 403)
+        self.assertFalse(User.objects.exists())
+
+    def test_quem_ja_tinha_conta_ganha_o_papel_ao_entrar_na_lista(self):
+        aluno_email = '2020000004@aluno.restinga.ifrs.edu.br'
+        self.login_google(aluno_email)
+        self.assertFalse(User.objects.get().groups.filter(name='Professores').exists())
+
+        with override_settings(PROFESSOR_EMAILS=[aluno_email]):
+            self.login_google(aluno_email)
+
+        self.assertEqual(sorted(User.objects.get().groups.values_list('name', flat=True)), ['Alunos', 'Professores'])
+
+    @override_settings(PROFESSOR_EMAILS=[PROFESSOR_DE_FORA])
+    def test_sair_da_lista_barra_o_proximo_login(self):
+        self.login_google(PROFESSOR_DE_FORA)
+        with override_settings(PROFESSOR_EMAILS=[]):
+            self.assertEqual(self.login_google(PROFESSOR_DE_FORA).status_code, 403)
 
     def test_login_nao_deixa_mensagem_pendurada(self):
         # Antes, "Conectado com sucesso como ..." aparecia mais tarde numa tela qualquer.

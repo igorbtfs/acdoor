@@ -239,9 +239,18 @@ SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 
 # E-mails que viram administradores (superusuário + acesso ao /admin/ e às telas
 # de gerenciamento) ao entrar com o Google. Lista separada por vírgulas no .env:
-#   ADMIN_EMAILS=matricula@aluno.restinga.ifrs.edu.br
+#   ADMIN_EMAILS=matricula@aluno.restinga.ifrs.edu.br,pessoal@gmail.com
 # Fica no .env, e não aqui, para não publicar e-mails pessoais no repositório.
+# Pode ser de qualquer domínio: só o e-mail exato entra, não o domínio inteiro.
 ADMIN_EMAILS = [email.lower() for email in env_list('ADMIN_EMAILS')]
+
+# E-mails avulsos que entram como professores, para quem não é do domínio do
+# campus (ex.: servidor de outro campus). Também vale só o e-mail exato.
+#   PROFESSOR_EMAILS=fulano@outrocampus.ifrs.edu.br
+PROFESSOR_EMAILS = [email.lower() for email in env_list('PROFESSOR_EMAILS')]
+# Tirar um e-mail destas listas impede o próximo login, mas não desfaz o papel
+# já dado: para revogar de vez, desative a conta no /admin/ (a partir daí as
+# orientações dela deixam de valer na porta).
 
 # (As mensagens "Conectado como..." e "Você saiu" do allauth são desligadas pelos
 # arquivos vazios em core/templates/account/messages/.)
