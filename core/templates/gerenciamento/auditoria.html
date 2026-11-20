@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Auditoria</h1>
+    <p class="ajuda">Quem concedeu, renovou ou retirou acesso, e quem mexeu em cartões e cadastros. Os registros não podem ser alterados.</p>
+
+    <form method="get" class="filtros">
+        <input type="search" name="q" value="{{ busca }}" placeholder="Nome de quem fez, do aluno ou parte do detalhe" aria-label="Buscar na auditoria">
+        <button type="submit" class="btn btn-secundario">Buscar</button>
+        {% if busca %}<a href="{% url 'auditoria' %}" class="btn btn-cancel">Limpar</a>{% endif %}
+    </form>
+
+    <div class="tabela-wrap">
+        <table class="tabela tabela-cartoes">
+            <thead>
+                <tr>
+                    <th>Quando</th>
+                    <th>Quem fez</th>
+                    <th>O quê</th>
+                    <th>Aluno</th>
+                    <th>Detalhe</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for registro in pagina %}
+                <tr>
+                    <td data-label="Quando">{{ registro.quando|date:"d/m/Y H:i" }}</td>
+                    <td data-label="Quem fez">{{ registro.autor_nome }}</td>
+                    <td data-label="O quê">{{ registro.get_acao_display }}</td>
+                    <td data-label="Aluno">{{ registro.aluno_nome }}</td>
+                    <td data-label="Detalhe">{{ registro.detalhe|default:"—" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="vazio">Nenhum registro encontrado.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% include 'gerenciamento/_paginacao.html' %}
+{% endblock %}

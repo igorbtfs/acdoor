@@ -1,0 +1,12 @@
+{# Navegação entre páginas. Espera `pagina` (Page do Django) e `filtros` (querystring dos filtros ativos). #}
+{% if pagina.has_other_pages %}
+<nav class="paginacao" aria-label="Páginas">
+    {% if pagina.has_previous %}
+        <a class="btn btn-secundario" href="?{% if filtros %}{{ filtros }}&amp;{% endif %}page={{ pagina.previous_page_number }}">← Mais recentes</a>
+    {% endif %}
+    <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+    {% if pagina.has_next %}
+        <a class="btn btn-secundario" href="?{% if filtros %}{{ filtros }}&amp;{% endif %}page={{ pagina.next_page_number }}">Mais antigos →</a>
+    {% endif %}
+</nav>
+{% endif %}

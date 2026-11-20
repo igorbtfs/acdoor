@@ -3,18 +3,13 @@
 
 {% block content %}
 <div class="login-box">
-    <h1>Faça seu Login</h1>
-    <p>Utilize sua conta institucional Google para acessar o sistema.</p>
-    <br>
+    <h1>Faça seu login</h1>
+    <p>Use sua conta institucional do Google (@restinga.ifrs.edu.br ou @aluno.restinga.ifrs.edu.br).</p>
 
-    {% get_providers as socialaccount_providers %}
-    {% if socialaccount_providers %}
-        <a href="{% provider_login_url 'google' %}" class="btn btn-google">
-            Login com Google
-        </a>
-
-        {% include "socialaccount/snippets/login_extra.html" %}
-    {% endif %}
-
-    </div>
+    {# Enviar por POST leva direto ao Google, sem a tela intermediária "Continuar". #}
+    <form method="post" action="{% provider_login_url 'google' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-google">Login com Google</button>
+    </form>
+</div>
 {% endblock %}

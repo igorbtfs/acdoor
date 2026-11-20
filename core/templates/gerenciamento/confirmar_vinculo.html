@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% load acdoor %}
+
+{% block content %}
+    <h1>Confirmar o cartão</h1>
+    <p class="ajuda">Confira se este é mesmo o cartão do aluno. Depois de confirmar, é este cartão que abre a porta em nome dele.</p>
+
+    <dl class="ficha">
+        <div>
+            <dt>Cartão</dt>
+            <dd>
+                <span class="uid">{{ cartao.uid|uid_para:eh_admin }}</span>
+                — lido às <strong>{{ cartao.last_seen|date:"H:i:s" }}</strong> ({{ cartao.last_seen|ha_quanto }})
+            </dd>
+        </div>
+        <div>
+            <dt>Aluno</dt>
+            <dd>
+                <strong>{{ aluno.get_full_name|default:aluno.username }}</strong>
+                <small class="detalhe">{{ aluno.email }}</small>
+                <small class="detalhe">{{ aluno.aluno_profile.get_curso_display|default:"Curso a definir" }}</small>
+            </dd>
+        </div>
+    </dl>
+
+    <form method="post" action="{% url 'vincular_cartao' %}" class="formulario">
+        {% csrf_token %}
+        <input type="hidden" name="cartao_id" value="{{ cartao.id }}">
+        <input type="hidden" name="aluno_id" value="{{ aluno.id }}">
+        <input type="hidden" name="confirmado" value="1">
+
+        {% if deve_orientar %}
+            <div class="aviso">
+                Você ainda não é orientador deste aluno. Ao confirmar, ele passa a ser seu bolsista e você responde pelo acesso dele.
+            </div>
+            <div class="campo">
+                {{ form.valido_ate.label_tag }}
+                {{ form.valido_ate }}
+                {{ form.valido_ate.errors }}
+            </div>
+        {% elif pode_orientar %}
+            <div class="campo campo-opcao">
+                <label>
+                    <input type="checkbox" name="tornar_orientador">
+                    Também quero ser orientador deste aluno
+                </label>
+                <small class="detalhe">Sem um orientador com a validade em dia, o cartão fica cadastrado mas não abre a porta.</small>
+            </div>
+            <div class="campo">
+                {{ form.valido_ate.label_tag }}
+                {{ form.valido_ate }}
+                {{ form.valido_ate.errors }}
+            </div>
+        {% elif proprio %}
+            <div class="aviso">
+                Este é o seu próprio cadastro. O cartão fica vinculado, mas só abre a porta quando outro orientador conceder o seu acesso.
+            </div>
+        {% endif %}
+
+        <div class="acoes">
+            <button type="submit" class="btn btn-primary">Confirmar e vincular</button>
+            <a href="{% url 'cartoes_pendentes' %}" class="btn btn-cancel">Cancelar</a>
+        </div>
+    </form>
+{% endblock %}

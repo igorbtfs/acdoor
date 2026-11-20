@@ -5,10 +5,16 @@
     --ifrs-green-dark: #007a32;
     --danger-red: #d9534f;
     --danger-red-dark: #c9302c;
+    --alerta: #b7791f;
     --background-light: #f4f4f4;
     --text-dark: #333;
+    --text-muted: #666;
     --border-color: #ddd;
     --box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+* {
+    box-sizing: border-box;
 }
 
 body {
@@ -25,11 +31,15 @@ body {
     padding: 0 20px;
 }
 
+a {
+    color: var(--ifrs-green-dark);
+}
+
 /* --- Navbar --- */
 .navbar {
     background-color: var(--ifrs-green);
     color: white;
-    padding: 1rem 0;
+    padding: 0.75rem 0;
     box-shadow: var(--box-shadow);
 }
 
@@ -37,33 +47,65 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 16px;
     margin-top: 0;
     margin-bottom: 0;
 }
 
 .navbar-brand {
-    font-size: 1.5em;
+    font-size: 1.4em;
     font-weight: bold;
     color: white;
     text-decoration: none;
+    white-space: nowrap;
 }
 
 .navbar-nav {
     display: flex;
     align-items: center;
-    gap: 15px;
+    flex-wrap: wrap;
+    gap: 4px;
 }
 
 .navbar-nav a {
     color: white;
     text-decoration: none;
-    padding: 5px 10px;
+    padding: 6px 10px;
     border-radius: 4px;
+    white-space: nowrap;
     transition: background-color 0.2s ease-in-out;
 }
 
-.navbar-nav a:hover {
+.navbar-nav a:hover,
+.navbar-nav a.ativo {
     background-color: var(--ifrs-green-dark);
+}
+
+.navbar-usuario {
+    padding: 6px 10px;
+    margin-left: 8px;
+    border-left: 1px solid rgba(255,255,255,0.4);
+    white-space: nowrap;
+    opacity: 0.9;
+}
+
+.contador {
+    display: inline-block;
+    min-width: 1.5em;
+    padding: 0 6px;
+    border-radius: 999px;
+    background-color: white;
+    color: var(--ifrs-green-dark);
+    font-size: 0.85em;
+    font-weight: bold;
+    text-align: center;
+}
+
+/* Botão do menu: só aparece em telas estreitas (veja o fim do arquivo). */
+.menu-chave,
+.menu-botao {
+    display: none;
 }
 
 /* --- Conteúdo Principal --- */
@@ -79,6 +121,30 @@ h1 {
     color: var(--ifrs-green);
     border-bottom: 2px solid var(--background-light);
     padding-bottom: 10px;
+    margin-top: 0;
+    line-height: 1.25;
+}
+
+h2 {
+    margin-top: 2rem;
+    font-size: 1.25em;
+}
+
+.ajuda {
+    color: var(--text-muted);
+    max-width: 75ch;
+}
+
+.detalhe {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.85em;
+    font-weight: normal;
+}
+
+h2 .detalhe {
+    display: inline;
+    margin-left: 6px;
 }
 
 /* --- Botões --- */
@@ -90,7 +156,15 @@ h1 {
     cursor: pointer;
     text-decoration: none;
     font-size: 1em;
+    font-family: inherit;
+    line-height: 1.3;
+    white-space: nowrap;
     transition: background-color 0.2s;
+}
+
+.btn-pequeno {
+    padding: 6px 12px;
+    font-size: 0.9em;
 }
 
 .btn-primary {
@@ -99,6 +173,15 @@ h1 {
 }
 .btn-primary:hover {
     background-color: var(--ifrs-green-dark);
+}
+
+.btn-secundario {
+    background-color: white;
+    color: var(--ifrs-green-dark);
+    border: 1px solid var(--ifrs-green);
+}
+.btn-secundario:hover {
+    background-color: #e8f5ee;
 }
 
 .btn-danger {
@@ -117,31 +200,335 @@ h1 {
     background-color: #357ae8;
 }
 
-/* --- Tabela de Gerenciamento --- */
+.btn-cancel {
+    background-color: #777;
+    color: white;
+}
+.btn-cancel:hover {
+    background-color: #666;
+}
+
+.btn-edit {
+    background-color: #337ab7;
+    color: white;
+}
+.btn-edit:hover {
+    background-color: #286090;
+}
+
+/* --- Formulários --- */
+input[type="text"],
+input[type="email"],
+input[type="search"],
+input[type="date"],
+select {
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: white;
+    color: var(--text-dark);
+    font-size: 1em;
+    font-family: inherit;
+    max-width: 100%;
+}
+
+input:focus,
+select:focus,
+.btn:focus-visible {
+    outline: 2px solid var(--ifrs-green);
+    outline-offset: 1px;
+}
+
+.formulario {
+    max-width: 560px;
+}
+
+.campo {
+    margin-bottom: 16px;
+}
+
+.campo > label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.campo input[type="text"],
+.campo input[type="email"],
+.campo input[type="date"],
+.campo select {
+    width: 100%;
+}
+
+.campo-opcao > label {
+    font-weight: normal;
+}
+
+.errorlist {
+    color: var(--danger-red-dark);
+    list-style-type: none;
+    padding: 0;
+    margin: 4px 0 0 0;
+    font-size: 0.9em;
+}
+
+.filtros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.filtros input[type="search"] {
+    flex: 1 1 240px;
+}
+
+.acao-inline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+}
+
+.acoes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.acoes form {
+    margin: 0;
+}
+
+.bloco-form {
+    margin-top: 32px;
+    padding: 16px 20px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+.bloco-form summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+/* --- Tabelas --- */
+.tabela-wrap {
+    overflow-x: auto;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 20px;
+    margin-top: 12px;
 }
 
 th, td {
     border: 1px solid var(--border-color);
-    padding: 12px;
+    padding: 10px 12px;
     text-align: left;
+    vertical-align: top;
 }
 
 th {
     background-color: var(--background-light);
+    white-space: nowrap;
 }
 
 tr:nth-child(even) {
     background-color: #f9f9f9;
 }
 
+td.vazio {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 24px 12px;
+}
+
+.uid {
+    font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    white-space: nowrap;
+}
+
+/* --- Selos e situação --- */
+.selo {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 0.85em;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.selo-ok {
+    color: #155724;
+    background-color: #d4edda;
+}
+.selo-erro {
+    color: #721c24;
+    background-color: #f8d7da;
+}
+.selo-alerta {
+    color: #7a5200;
+    background-color: #fff3cd;
+}
+.selo-neutro {
+    color: #333;
+    background-color: #e9ecef;
+}
+
+.status-granted {
+    color: var(--ifrs-green-dark);
+    font-weight: bold;
+}
+.status-denied {
+    color: var(--danger-red-dark);
+    font-weight: bold;
+}
+
+.situacao-box {
+    display: flex;
+    flex-direction: column;
+    padding: 16px 20px;
+    border-radius: 8px;
+    border-left: 6px solid;
+    margin: 12px 0 20px 0;
+}
+.situacao-box strong {
+    font-size: 1.15em;
+}
+.situacao-box.ok {
+    background-color: #d4edda;
+    border-color: var(--ifrs-green);
+    color: #155724;
+}
+.situacao-box.bloqueado {
+    background-color: #f8d7da;
+    border-color: var(--danger-red);
+    color: #721c24;
+}
+
+.ficha {
+    margin: 16px 0;
+}
+.ficha > div {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--background-light);
+}
+.ficha dt {
+    font-weight: 600;
+}
+.ficha dd {
+    margin: 0;
+}
+
+.aviso {
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    border-radius: 6px;
+    background-color: #fff3cd;
+    color: #7a5200;
+}
+
+/* --- Resumo da página inicial --- */
+.cartoes-resumo {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+    margin: 16px 0 8px 0;
+}
+.cartao-resumo {
+    display: flex;
+    flex-direction: column;
+    padding: 14px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: #fafafa;
+    color: var(--text-dark);
+    text-decoration: none;
+}
+.cartao-resumo:hover {
+    border-color: var(--ifrs-green);
+}
+.cartao-resumo .numero {
+    font-size: 2em;
+    font-weight: bold;
+    line-height: 1.1;
+    color: var(--ifrs-green-dark);
+}
+.cartao-resumo .rotulo {
+    color: var(--text-muted);
+    font-size: 0.9em;
+}
+.cartao-resumo.atencao {
+    border-color: #e0b84a;
+    background-color: #fffaf0;
+}
+.cartao-resumo.atencao .numero {
+    color: var(--alerta);
+}
+.cartao-resumo.problema {
+    border-color: var(--danger-red);
+    background-color: #fdf3f3;
+}
+.cartao-resumo.problema .numero {
+    color: var(--danger-red-dark);
+}
+
+/* --- Cartões pendentes --- */
+.cartao-pendente {
+    padding: 16px 20px;
+    margin: 12px 0;
+    border: 1px solid var(--border-color);
+    border-left: 6px solid var(--ifrs-green);
+    border-radius: 8px;
+    background-color: #fafafa;
+}
+.cartao-pendente-dados {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 16px;
+    margin-bottom: 12px;
+}
+.cartao-pendente-dados .uid {
+    font-size: 1.2em;
+    font-weight: bold;
+}
+.cartao-pendente select {
+    flex: 1 1 260px;
+    min-width: 0;
+}
+
+.vazio-box {
+    padding: 24px;
+    border: 1px dashed var(--border-color);
+    border-radius: 8px;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.paginacao {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 20px;
+}
+
 /* --- Páginas Específicas --- */
 .login-box, .error-box {
     text-align: center;
     padding: 2rem;
+}
+.login-box form {
+    margin-top: 1.5rem;
 }
 .error-box .email {
     font-weight: bold;
@@ -151,13 +538,13 @@ tr:nth-child(even) {
     border-radius: 4px;
 }
 
-
 /* --- Mensagens (Alerts) --- */
 .messages {
     margin-bottom: 20px;
 }
 .alert {
-    padding: 15px;
+    padding: 12px 15px;
+    margin-bottom: 8px;
     border: 1px solid transparent;
     border-radius: 4px;
 }
@@ -171,109 +558,109 @@ tr:nth-child(even) {
     background-color: #f8d7da;
     border-color: #f5c6cb;
 }
-
-/* --- Formulário de Adição Manual --- */
-.add-manual-form {
-    background-color: #f9f9f9;
-    padding: 20px;
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
-    margin-bottom: 30px;
-}
-.add-manual-form h2 {
-    margin-top: 0;
-    color: var(--text-dark);
-}
-.add-manual-form input[type="email"]{
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 4px;
-    border: 1px solid var(--border-color);
-    box-sizing: border-box; /* Garante que padding não afete a largura total */
-}
-.add-manual-form .errorlist {
-    color: var(--danger-red);
-    list-style-type: none;
-    padding: 0;
-    margin: -5px 0 10px 0;
+.alert-info,
+.alert-warning {
+    color: #7a5200;
+    background-color: #fff3cd;
+    border-color: #ffe69c;
 }
 
-/* --- Estilos do Modal --- */
-.modal {
-    display: none; /* Escondido por padrão */
-    position: fixed; /* Fica fixo na tela */
-    z-index: 1000; /* Fica na frente de tudo */
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto; /* Permite rolagem se o conteúdo for grande */
-    background-color: rgba(0,0,0,0.5); /* Fundo preto semi-transparente */
+/* --- Telas estreitas (celular) ---
+   O vínculo de cartões costuma ser feito em pé, ao lado da porta. */
+@media (max-width: 900px) {
+    .menu-botao {
+        display: inline-block;
+        padding: 6px 12px;
+        border: 1px solid rgba(255,255,255,0.7);
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    /* O menu fica recolhido até tocar em "Menu" (checkbox escondido, sem JavaScript). */
+    .navbar-nav {
+        display: none;
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+    }
+    .menu-chave:checked ~ .navbar-nav {
+        display: flex;
+    }
+    .menu-chave:focus-visible + .menu-botao {
+        outline: 2px solid white;
+    }
+    .navbar-nav a {
+        padding: 10px;
+    }
+    .navbar-usuario {
+        margin-left: 0;
+        border-left: none;
+        border-top: 1px solid rgba(255,255,255,0.4);
+    }
 }
 
-.modal-content {
-    background-color: #fefefe;
-    margin: 15% auto; /* 15% do topo e centralizado horizontalmente */
-    padding: 20px;
-    border: 1px solid #888;
-    width: 80%;
-    max-width: 500px;
-    border-radius: 8px;
-    position: relative;
-    text-align: center;
-}
+@media (max-width: 720px) {
+    .container {
+        padding: 0 12px;
+    }
+    main.container {
+        padding: 1.25rem 1rem;
+        margin-top: 16px;
+        border-radius: 0;
+    }
+    h1 {
+        font-size: 1.5em;
+    }
 
-.close-btn {
-    color: #aaa;
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
-    position: absolute;
-    top: 10px;
-    right: 20px;
-}
+    /* Cada linha da tabela vira um cartão, com o nome da coluna ao lado do valor. */
+    .tabela-cartoes thead {
+        display: none;
+    }
+    .tabela-cartoes,
+    .tabela-cartoes tbody,
+    .tabela-cartoes tr,
+    .tabela-cartoes td {
+        display: block;
+        width: 100%;
+    }
+    .tabela-cartoes tr {
+        margin-bottom: 12px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background-color: white;
+        overflow: hidden;
+    }
+    .tabela-cartoes td {
+        border: none;
+        border-bottom: 1px solid var(--background-light);
+        padding: 8px 12px;
+    }
+    .tabela-cartoes td:last-child {
+        border-bottom: none;
+    }
+    .tabela-cartoes td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 0.75em;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--text-muted);
+    }
 
-.close-btn:hover,
-.close-btn:focus {
-    color: black;
-    text-decoration: none;
-    cursor: pointer;
-}
+    .ficha > div {
+        grid-template-columns: 1fr;
+        gap: 2px;
+    }
 
-.modal-actions {
-    margin-top: 20px;
-}
-.modal-actions .btn {
-    margin: 0 10px;
-}
-.btn-cancel {
-    background-color: #777;
-    color: white;
-}
-.delete-btn {
-    background-color: #f0ad4e;
-    color: white;
-}
-.delete-btn:hover {
-    background-color: #ec971f;
-}
-
-/* core/static/core/css/styles.css */
-.btn-edit {
-    background-color: #337ab7;
-    color: white;
-}
-.btn-edit:hover {
-    background-color: #286090;
-}
-
-/* --- Estilos para a Tabela de Logs --- */
-.status-granted {
-    color: var(--ifrs-green);
-    font-weight: bold;
-}
-.status-denied {
-    color: var(--danger-red);
-    font-weight: bold;
+    .acao-inline input[type="date"],
+    .acao-inline select,
+    .filtros select,
+    .filtros input[type="search"] {
+        flex: 1 1 100%;
+    }
+    .btn {
+        white-space: normal;
+        text-align: center;
+    }
 }

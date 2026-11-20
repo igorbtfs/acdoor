@@ -1,13 +1,97 @@
 {% extends 'base.html' %}
+{% load socialaccount acdoor %}
 
 {% block content %}
-    <h1>Bem-vindo ao AC-Door!</h1>
-
-    {% if user.is_authenticated %}
-        <p>Este é o sistema de controle de acesso do laboratório de robótica.</p>
+    {% if not user.is_authenticated %}
+        <h1>Bem-vindo ao AC-Door</h1>
+        <p>Sistema de controle de acesso do laboratório de robótica do IFRS Campus Restinga.</p>
+        <p>Entre com sua conta institucional do Google para ver a situação do seu acesso.</p>
+        <form method="post" action="{% provider_login_url 'google' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-google">Entrar com Google</button>
+        </form>
     {% else %}
-        <p>Você não está logado.</p>
-        <p>Por favor, faça o login para continuar.</p>
-        <a href="{% url 'account_login' %}" class="btn btn-primary">Fazer Login</a>
+        <h1>Olá, {{ user.first_name|default:user.username }}</h1>
+
+        {% if resumo %}
+            <div class="cartoes-resumo">
+                <a class="cartao-resumo" href="{% url 'gerenciar_bolsistas' %}">
+                    <span class="numero">{{ resumo.bolsistas }}</span>
+                    <span class="rotulo">bolsistas seus com orientação em dia</span>
+                </a>
+                <a class="cartao-resumo {% if resumo.vencendo %}atencao{% endif %}" href="{% url 'gerenciar_bolsistas' %}">
+                    <span class="numero">{{ resumo.vencendo }}</span>
+                    <span class="rotulo">vencem nos próximos 30 dias</span>
+                </a>
+                <a class="cartao-resumo {% if resumo.vencidas %}problema{% endif %}" href="{% url 'gerenciar_bolsistas' %}">
+                    <span class="numero">{{ resumo.vencidas }}</span>
+                    <span class="rotulo">já venceram e esperam renovação</span>
+                </a>
+                <a class="cartao-resumo {% if cartoes_pendentes_qtd %}atencao{% endif %}" href="{% url 'cartoes_pendentes' %}">
+                    <span class="numero">{{ cartoes_pendentes_qtd }}</span>
+                    <span class="rotulo">cartões aguardando vínculo agora</span>
+                </a>
+                <a class="cartao-resumo" href="{% url 'access_logs' %}?status=GRANTED">
+                    <span class="numero">{{ resumo.acessos_hoje }}</span>
+                    <span class="rotulo">entradas no laboratório hoje</span>
+                </a>
+            </div>
+        {% endif %}
+
+        {% if sou_aluno %}
+            <h2>Meu acesso</h2>
+            <div class="situacao-box {% if meu_acesso.liberado %}ok{% else %}bloqueado{% endif %}">
+                <strong>{% if meu_acesso.liberado %}Seu cartão abre a porta{% else %}Seu cartão ainda não abre a porta{% endif %}</strong>
+                <span>{{ meu_acesso.motivo }}</span>
+            </div>
+
+            <dl class="ficha">
+                <div>
+                    <dt>Cartão</dt>
+                    <dd>
+                        {% if meu_cartao %}
+                            Cadastrado <span class="uid">{{ meu_cartao|uid_para:False }}</span>
+                        {% else %}
+                            Não cadastrado. Aproxime seu cartão do leitor da porta e peça ao seu orientador para vinculá-lo.
+                        {% endif %}
+                    </dd>
+                </div>
+                <div>
+                    <dt>Orientador</dt>
+                    <dd>
+                        {% for orientacao in minhas_orientacoes %}
+                            <div>
+                                {{ orientacao.orientador.get_full_name|default:orientacao.orientador.username }}
+                                — válido até {{ orientacao.valido_ate|date:"d/m/Y" }}
+                                {% if orientacao.vencida %}<span class="selo selo-erro">vencido</span>{% endif %}
+                            </div>
+                        {% empty %}
+                            Nenhum. Peça a um professor do laboratório para adicionar você como bolsista.
+                        {% endfor %}
+                    </dd>
+                </div>
+            </dl>
+
+            <h2>Meus últimos acessos</h2>
+            <div class="tabela-wrap">
+                <table class="tabela tabela-cartoes">
+                    <thead>
+                        <tr><th>Data e hora</th><th>Resultado</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for log in meus_acessos %}
+                        <tr>
+                            <td data-label="Data e hora">{{ log.timestamp|date:"d/m/Y H:i:s" }}</td>
+                            <td data-label="Resultado"><span class="status-{{ log.status|lower }}">{{ log.get_status_display }}</span></td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="2" class="vazio">Nenhum acesso registrado com o seu cartão.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% elif not resumo %}
+            <p>Sua conta não tem nenhuma função neste portal. Fale com o administrador do laboratório.</p>
+        {% endif %}
     {% endif %}
 {% endblock %}

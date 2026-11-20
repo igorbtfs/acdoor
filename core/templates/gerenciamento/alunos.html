@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% load acdoor %}
+
+{% block content %}
+    <h1>Alunos</h1>
+    <p class="ajuda">
+        Todos os alunos que já entraram no portal ou foram cadastrados. Ao reivindicar um aluno, você passa a
+        responder pelo acesso dele até a data escolhida.
+    </p>
+
+    <form method="get" class="filtros">
+        <input type="search" name="q" value="{{ busca }}" placeholder="Buscar por nome ou e-mail" aria-label="Buscar aluno">
+        <button type="submit" class="btn btn-secundario">Buscar</button>
+        {% if busca %}<a href="{% url 'alunos' %}" class="btn btn-cancel">Limpar</a>{% endif %}
+    </form>
+
+    <div class="tabela-wrap">
+        <table class="tabela tabela-cartoes">
+            <thead>
+                <tr>
+                    <th>Aluno</th>
+                    <th>Curso</th>
+                    <th>Cartão</th>
+                    <th>Orientadores</th>
+                    <th>Situação</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for linha in linhas %}
+                <tr>
+                    <td data-label="Aluno">
+                        <strong>{{ linha.aluno.get_full_name|default:linha.aluno.username }}</strong>
+                        <small class="detalhe">{{ linha.aluno.email }}</small>
+                    </td>
+                    <td data-label="Curso">{{ linha.aluno.aluno_profile.get_curso_display|default:"A definir" }}</td>
+                    <td data-label="Cartão">
+                        {% if linha.cartao %}
+                            {% if eh_admin or linha.minha %}
+                                <span class="uid">{{ linha.cartao|uid_para:eh_admin }}</span>
+                            {% else %}
+                                Cadastrado
+                            {% endif %}
+                        {% else %}
+                            <span class="selo selo-alerta">Sem cartão</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Orientadores">
+                        {% for orientacao in linha.orientacoes %}
+                            <div>
+                                {{ orientacao.orientador.get_full_name|default:orientacao.orientador.username }}
+                                <small class="detalhe">até {{ orientacao.valido_ate|date:"d/m/Y" }}{% if orientacao.vencida %} (vencido){% endif %}</small>
+                            </div>
+                        {% empty %}
+                            <span class="detalhe">Nenhum</span>
+                        {% endfor %}
+                    </td>
+                    <td data-label="Situação">{% include 'gerenciamento/_situacao.html' with situacao=linha.situacao %}</td>
+                    <td data-label="Ações">
+                        <div class="acoes">
+                            {% if linha.minha %}
+                                <span class="selo selo-neutro">Seu bolsista</span>
+                            {% elif linha.aluno.pk == user.pk %}
+                                <span class="detalhe">É você. Outro orientador precisa conceder o seu acesso.</span>
+                            {% else %}
+                                <form method="post" action="{% url 'reivindicar_aluno' linha.aluno.id %}" class="acao-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                    <input type="date" name="valido_ate" value="{{ validade_padrao|date:'Y-m-d' }}" aria-label="Acesso válido até" required>
+                                    <button type="submit" class="btn btn-primary btn-pequeno">Reivindicar</button>
+                                </form>
+                            {% endif %}
+
+                            {% if eh_admin or linha.minha %}
+                                <a href="{% url 'edit_aluno' linha.aluno.id %}" class="btn btn-edit btn-pequeno">Editar</a>
+                            {% endif %}
+
+                            {% if eh_admin and not linha.aluno.is_staff and not linha.aluno.is_superuser %}
+                                <form method="post" action="{% url 'delete_aluno' linha.aluno.id %}"
+                                      onsubmit="return confirm('Excluir permanentemente o cadastro de {{ linha.aluno.get_full_name|default:linha.aluno.username|escapejs }}? Esta ação não pode ser desfeita.');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger btn-pequeno">Excluir</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="vazio">
+                        {% if busca %}Nenhum aluno encontrado para "{{ busca }}".{% else %}Nenhum aluno no sistema ainda.{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <details class="bloco-form" {% if form.errors %}open{% endif %}>
+        <summary>Cadastrar um aluno que ainda não entrou no portal</summary>
+        <p class="ajuda">
+            O aluno entra depois com o Google, usando este mesmo e-mail, e cai neste cadastro.
+            Quem cadastra passa a ser o orientador dele.
+        </p>
+        <form method="post" action="{% url 'alunos' %}" class="formulario">
+            {% csrf_token %}
+            {% for field in form %}
+                <div class="campo">
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {{ field.errors }}
+                </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary">Cadastrar aluno</button>
+        </form>
+    </details>
+{% endblock %}

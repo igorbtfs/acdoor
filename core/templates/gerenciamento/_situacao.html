@@ -1,0 +1,8 @@
+{# Selo com a situação do acesso de um aluno. Espera a variável `situacao`. #}
+{% if situacao.liberado %}
+    <span class="selo selo-ok">Liberado</span>
+    <small class="detalhe">até {{ situacao.valido_ate|date:"d/m/Y" }}</small>
+{% else %}
+    <span class="selo selo-erro">Bloqueado</span>
+    <small class="detalhe">{{ situacao.motivo }}</small>
+{% endif %}

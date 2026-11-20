@@ -1,17 +1,47 @@
 {% extends 'base.html' %}
+{% load acdoor %}
 
 {% block content %}
-    <h1>Editar Aluno: {{ aluno.get_full_name }}</h1>
-    <p>Altere os dados necessários e clique em "Salvar".</p>
+    <h1>Editar aluno: {{ aluno.get_full_name|default:aluno.username }}</h1>
 
-    <form method="post">
+    {% if not eh_admin %}
+        <dl class="ficha">
+            <div>
+                <dt>E-mail</dt>
+                <dd>{{ aluno.email }} <small class="detalhe">Só o administrador altera o e-mail, porque é ele que liga o cadastro à conta Google do aluno.</small></dd>
+            </div>
+            <div>
+                <dt>Cartão</dt>
+                <dd>
+                    {% if cartao %}
+                        <span class="uid">{{ cartao|uid_para:False }}</span>
+                    {% else %}
+                        Sem cartão. Para vincular, peça ao aluno para aproximar o cartão do leitor e use
+                        <a href="{% url 'cartoes_pendentes' %}">Cartões pendentes</a>.
+                    {% endif %}
+                </dd>
+            </div>
+        </dl>
+    {% endif %}
+
+    <form method="post" class="formulario">
         {% csrf_token %}
-        <div class="add-manual-form" style="margin-top: 20px;">
-            {{ form.as_p }}
-        </div>
-        <div class="modal-actions" style="text-align: left;">
-            <button type="submit" class="btn btn-primary">Salvar Alterações</button>
-            <a href="{% url 'gerenciar_bolsistas' %}" class="btn btn-cancel">Cancelar</a>
+        {% for field in form %}
+            <div class="campo {% if field.name == 'remover_cartao' %}campo-opcao{% endif %}">
+                {% if field.name == 'remover_cartao' %}
+                    <label>{{ field }} {{ field.label }}</label>
+                {% else %}
+                    {{ field.label_tag }}
+                    {{ field }}
+                {% endif %}
+                {% if field.help_text %}<small class="detalhe">{{ field.help_text }}</small>{% endif %}
+                {{ field.errors }}
+            </div>
+        {% endfor %}
+
+        <div class="acoes">
+            <button type="submit" class="btn btn-primary">Salvar alterações</button>
+            <a href="{% if eh_admin %}{% url 'alunos' %}{% else %}{% url 'gerenciar_bolsistas' %}{% endif %}" class="btn btn-cancel">Cancelar</a>
         </div>
     </form>
 {% endblock %}

@@ -1,6 +1,7 @@
 # core/models.py
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 # Lista de cursos pré-estipulada
 CURSO_CHOICES = [
@@ -37,24 +38,92 @@ class AlunoProfile(models.Model):
         return f"Perfil de {self.user.get_full_name() or self.user.username}"
 
 
-class ProfessorProfile(models.Model):
-    # Cria um link um-para-um com o modelo de usuário padrão do Django.
-    # Se um usuário for deletado, seu perfil também será.
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='professor_profile')
+def eh_gestor(user):
+    """
+    Professores (grupo 'Professores') e administradores (superusuários) podem
+    gerenciar bolsistas e ser orientadores. Usa `user.groups.all()` para
+    aproveitar o prefetch quando a lista de usuários já veio com os grupos.
+    """
+    if not user.is_active:
+        return False
+    return user.is_superuser or any(g.name == 'Professores' for g in user.groups.all())
 
-    # Cria uma relação Muitos-para-Muitos.
-    # Um professor (através do seu perfil) pode gerenciar muitos usuários (alunos).
-    # O 'limit_choices_to' garante que na interface do Admin só aparecerão usuários do grupo 'Alunos'.
-    bolsistas = models.ManyToManyField(
-        User,
-        related_name='orientadores',
-        blank=True,
-        limit_choices_to={'groups__name': 'Alunos'}
+
+class Orientacao(models.Model):
+    """
+    Um orientador se responsabiliza pelo acesso de um aluno ao laboratório,
+    até uma data de validade. É isto que autoriza o cartão do aluno na porta.
+    """
+    orientador = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orientacoes_dadas')
+    aluno = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orientacoes_recebidas')
+    valido_ate = models.DateField(verbose_name="Válido até")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    concedido_por = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+        verbose_name="Concedido por",
     )
 
+    class Meta:
+        verbose_name = "Orientação"
+        verbose_name_plural = "Orientações"
+        ordering = ['aluno__first_name', 'aluno__last_name']
+        constraints = [
+            models.UniqueConstraint(fields=['orientador', 'aluno'], name='orientacao_unica'),
+        ]
+
     def __str__(self):
-        return f"Perfil de {self.user.get_full_name() or self.user.username}"
-    
+        return f"{self.orientador.get_full_name() or self.orientador.username} orienta {self.aluno.get_full_name() or self.aluno.username}"
+
+    @property
+    def vencida(self):
+        return self.valido_ate < timezone.localdate()
+
+    @property
+    def vigente(self):
+        """
+        Só conta para liberar a porta se: não venceu, o orientador continua
+        ativo e com papel de gestor, e ninguém é orientador de si mesmo.
+        """
+        return (
+            not self.vencida
+            and self.orientador_id != self.aluno_id
+            and eh_gestor(self.orientador)
+        )
+
+
+class RegistroAuditoria(models.Model):
+    """Quem concedeu, renovou ou retirou acesso, e quem mexeu em cartões e cadastros."""
+    ACOES = [
+        ('ORIENTACAO_CRIADA', 'Acesso concedido'),
+        ('ORIENTACAO_RENOVADA', 'Validade alterada'),
+        ('ORIENTACAO_ENCERRADA', 'Acesso retirado'),
+        ('CARTAO_VINCULADO', 'Cartão vinculado'),
+        ('CARTAO_TROCADO', 'Cartão trocado'),
+        ('CARTAO_REMOVIDO', 'Cartão removido'),
+        ('ALUNO_CADASTRADO', 'Aluno cadastrado'),
+        ('ALUNO_EDITADO', 'Cadastro alterado'),
+        ('ALUNO_EXCLUIDO', 'Aluno excluído'),
+    ]
+
+    quando = models.DateTimeField(auto_now_add=True)
+    acao = models.CharField(max_length=30, choices=ACOES)
+    # Os nomes ficam copiados no registro: ele continua legível mesmo que a
+    # conta do autor ou do aluno seja excluída depois.
+    autor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    autor_nome = models.CharField(max_length=200)
+    aluno = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    aluno_nome = models.CharField(max_length=200)
+    detalhe = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        verbose_name = "Registro de auditoria"
+        verbose_name_plural = "Registros de auditoria"
+        ordering = ['-quando', '-id']
+
+    def __str__(self):
+        return f"{self.quando:%d/%m/%Y %H:%M} - {self.autor_nome}: {self.get_acao_display()} ({self.aluno_nome})"
+
+
 class AccessLog(models.Model):
     STATUS_CHOICES = [
         ('GRANTED', 'Acesso Concedido'),

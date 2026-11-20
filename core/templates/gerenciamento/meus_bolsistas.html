@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load acdoor %}
+
+{% block content %}
+    <h1>Meus bolsistas</h1>
+    <p class="ajuda">
+        Alunos pelos quais você responde. O cartão de cada um abre a porta enquanto a sua orientação estiver válida.
+        Para incluir alguém, use <a href="{% url 'alunos' %}">Alunos</a> ou, com o aluno na porta,
+        <a href="{% url 'cartoes_pendentes' %}">Cartões pendentes</a>.
+    </p>
+
+    <div class="tabela-wrap">
+        <table class="tabela tabela-cartoes">
+            <thead>
+                <tr>
+                    <th>Aluno</th>
+                    <th>Curso</th>
+                    <th>Cartão</th>
+                    <th>Situação</th>
+                    <th>Válido até</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for linha in linhas %}
+                <tr>
+                    <td data-label="Aluno">
+                        <strong>{{ linha.aluno.get_full_name|default:linha.aluno.username }}</strong>
+                        <small class="detalhe">{{ linha.aluno.email }}</small>
+                    </td>
+                    <td data-label="Curso">{{ linha.aluno.aluno_profile.get_curso_display|default:"A definir" }}</td>
+                    <td data-label="Cartão">
+                        {% if linha.cartao %}
+                            <span class="uid">{{ linha.cartao|uid_para:eh_admin }}</span>
+                        {% else %}
+                            <span class="selo selo-alerta">Sem cartão</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Situação">{% include 'gerenciamento/_situacao.html' with situacao=linha.situacao %}</td>
+                    <td data-label="Válido até">
+                        <form method="post" action="{% url 'renovar_orientacao' linha.minha.id %}" class="acao-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.path }}">
+                            <input type="date" name="valido_ate" value="{{ linha.minha.valido_ate|date:'Y-m-d' }}" aria-label="Válido até" required>
+                            <button type="submit" class="btn btn-secundario btn-pequeno">Salvar</button>
+                        </form>
+                    </td>
+                    <td data-label="Ações">
+                        <div class="acoes">
+                            <a href="{% url 'edit_aluno' linha.aluno.id %}" class="btn btn-edit btn-pequeno">Editar</a>
+                            <form method="post" action="{% url 'encerrar_orientacao' linha.minha.id %}"
+                                  onsubmit="return confirm('Retirar o acesso de {{ linha.aluno.get_full_name|default:linha.aluno.username|escapejs }}? O cartão deixa de abrir a porta se ele não tiver outro orientador.');">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.path }}">
+                                <button type="submit" class="btn btn-danger btn-pequeno">Retirar acesso</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="vazio">Você ainda não orienta nenhum aluno.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

@@ -1,6 +1,6 @@
 # core/admin.py
 from django.contrib import admin
-from .models import ProfessorProfile, AlunoProfile, AccessLog, UnassignedUIDLog
+from .models import AlunoProfile, AccessLog, Orientacao, RegistroAuditoria, UnassignedUIDLog
 
 class AccessLogAdmin(admin.ModelAdmin):
     list_display = ('timestamp', 'uid', 'status', 'user')
@@ -11,8 +11,31 @@ class UnassignedUIDLogAdmin(admin.ModelAdmin):
     list_display = ('uid', 'first_seen', 'last_seen')
     ordering = ('-last_seen',)
 
-admin.site.register(ProfessorProfile)
-admin.site.register(AlunoProfile) 
+class OrientacaoAdmin(admin.ModelAdmin):
+    list_display = ('aluno', 'orientador', 'valido_ate', 'concedido_por', 'criado_em')
+    list_filter = ('valido_ate',)
+    search_fields = (
+        'aluno__first_name', 'aluno__last_name', 'aluno__email',
+        'orientador__first_name', 'orientador__last_name',
+    )
+
+class RegistroAuditoriaAdmin(admin.ModelAdmin):
+    """A trilha de auditoria é só para consulta: ninguém cria, altera ou apaga por aqui."""
+    list_display = ('quando', 'autor_nome', 'acao', 'aluno_nome', 'detalhe')
+    list_filter = ('acao', 'quando')
+    search_fields = ('autor_nome', 'aluno_nome', 'detalhe')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+admin.site.register(AlunoProfile)
 admin.site.register(AccessLog, AccessLogAdmin)
 admin.site.register(UnassignedUIDLog, UnassignedUIDLogAdmin)
-
+admin.site.register(Orientacao, OrientacaoAdmin)
+admin.site.register(RegistroAuditoria, RegistroAuditoriaAdmin)

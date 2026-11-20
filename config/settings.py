@@ -243,11 +243,17 @@ SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 # Fica no .env, e não aqui, para não publicar e-mails pessoais no repositório.
 ADMIN_EMAILS = [email.lower() for email in env_list('ADMIN_EMAILS')]
 
-# Desabilita mensagens específicas do django-allauth
-ACCOUNT_MESSAGES = {
-    'logged_in': None,
-    'logged_out': None,
-}
+# (As mensagens "Conectado como..." e "Você saiu" do allauth são desligadas pelos
+# arquivos vazios em core/templates/account/messages/.)
+
+# Regras de acesso ao laboratório ---------------------------------------------
+# Validade sugerida quando um orientador concede ou renova o acesso de um aluno.
+ACESSO_VALIDADE_PADRAO_DIAS = int(os.environ.get('ACESSO_VALIDADE_PADRAO_DIAS', 180))
+# Prazo máximo que pode ser concedido de uma vez; depois disso é preciso renovar.
+ACESSO_VALIDADE_MAXIMA_DIAS = int(os.environ.get('ACESSO_VALIDADE_MAXIMA_DIAS', 366))
+# Um cartão desconhecido só pode ser vinculado a um aluno se foi lido no leitor
+# nos últimos N minutos (evita vincular o cartão de outra pessoa).
+CARTAO_PENDENTE_MINUTOS = int(os.environ.get('CARTAO_PENDENTE_MINUTOS', 10))
 
 
 

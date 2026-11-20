@@ -8,9 +8,9 @@ lista essas contas e, com --aplicar, tira do grupo e desativa cada uma.
     python manage.py revogar_dominio gmail.com            # só mostra
     python manage.py revogar_dominio gmail.com --aplicar  # executa
 
-Nada é apagado: os vínculos de orientação e os logs de acesso são mantidos,
-então nenhum bolsista perde o acesso à porta por causa deste comando.
-Superusuários não são alterados.
+Nada é apagado, mas uma conta desativada deixa de valer como orientador: os
+bolsistas dela perdem o acesso à porta se não tiverem outro orientador ativo.
+O comando mostra quantos são antes de aplicar. Superusuários não são alterados.
 """
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -38,8 +38,7 @@ class Command(BaseCommand):
 
         for user in contas:
             grupos = ', '.join(user.groups.values_list('name', flat=True)) or 'nenhum'
-            perfil = getattr(user, 'professor_profile', None)
-            bolsistas = perfil.bolsistas.count() if perfil else 0
+            bolsistas = user.orientacoes_dadas.count()
             cartao = getattr(getattr(user, 'aluno_profile', None), 'rfid_token', None)
 
             self.stdout.write(
@@ -53,8 +52,8 @@ class Command(BaseCommand):
                 continue
             if bolsistas:
                 self.stdout.write(
-                    "    -> os bolsistas desta conta CONTINUAM com acesso a porta; "
-                    "transfira a orientacao para outro professor quando puder."
+                    "    -> ATENCAO: os bolsistas desta conta PERDEM o acesso a porta ao desativar, "
+                    "a menos que tenham outro orientador ativo. Transfira a orientacao antes."
                 )
             if cartao:
                 self.stdout.write("    -> ATENCAO: ao desativar, o cartao desta conta deixa de abrir a porta.")

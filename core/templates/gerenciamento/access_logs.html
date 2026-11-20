@@ -1,35 +1,49 @@
 {% extends 'base.html' %}
+{% load acdoor %}
 
 {% block content %}
-    <h1>Logs de Acesso à Sala</h1>
-    <p>Histórico de todas as tentativas de acesso registradas pelo leitor.</p>
+    <h1>Logs de acesso</h1>
+    <p class="ajuda">Todas as tentativas registradas pelo leitor da porta, das mais recentes para as mais antigas.</p>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Data e Hora</th>
-                <th>UID do Cartão</th>
-                <th>Status</th>
-                <th>Usuário</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for log in logs %}
-            <tr>
-                <td>{{ log.timestamp|date:"d/m/Y H:i:s" }}</td>
-                <td>{{ log.uid }}</td>
-                <td>
-                    <span class="status-{{ log.status|lower }}">
-                        {{ log.get_status_display }}
-                    </span>
-                </td>
-                <td>{{ log.user.get_full_name|default:"Desconhecido" }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="4">Nenhum log de acesso encontrado.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <form method="get" class="filtros">
+        <select name="status" aria-label="Resultado">
+            <option value="">Todos os resultados</option>
+            <option value="GRANTED" {% if status == 'GRANTED' %}selected{% endif %}>Acesso concedido</option>
+            <option value="DENIED" {% if status == 'DENIED' %}selected{% endif %}>Acesso negado</option>
+        </select>
+        <input type="search" name="q" value="{{ busca }}" placeholder="Nome ou final do cartão" aria-label="Buscar nos logs">
+        <button type="submit" class="btn btn-secundario">Filtrar</button>
+        {% if status or busca %}<a href="{% url 'access_logs' %}" class="btn btn-cancel">Limpar</a>{% endif %}
+    </form>
+
+    <div class="tabela-wrap">
+        <table class="tabela tabela-cartoes">
+            <thead>
+                <tr>
+                    <th>Data e hora</th>
+                    <th>Usuário</th>
+                    <th>Cartão</th>
+                    <th>Resultado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in pagina %}
+                <tr>
+                    <td data-label="Data e hora">{{ log.timestamp|date:"d/m/Y H:i:s" }}</td>
+                    <td data-label="Usuário">{{ log.user.get_full_name|default:"Cartão desconhecido" }}</td>
+                    <td data-label="Cartão"><span class="uid">{{ log.uid|uid_para:eh_admin }}</span></td>
+                    <td data-label="Resultado">
+                        <span class="status-{{ log.status|lower }}">{{ log.get_status_display }}</span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="vazio">Nenhum registro encontrado.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% include 'gerenciamento/_paginacao.html' %}
 {% endblock %}

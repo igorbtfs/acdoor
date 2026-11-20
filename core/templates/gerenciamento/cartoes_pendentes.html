@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load acdoor %}
+
+{% block content %}
+    <h1>Cartões pendentes</h1>
+    <p class="ajuda">
+        Cartões que foram aproximados do leitor e ainda não pertencem a ninguém. Cada um fica aqui por
+        {{ minutos }} minutos depois da última leitura. Confira o horário para ter certeza de que é o cartão
+        do aluno que está com você.
+    </p>
+
+    <p><a href="{% url 'cartoes_pendentes' %}" class="btn btn-secundario">Atualizar a lista</a></p>
+
+    {% for cartao in pendentes %}
+        <section class="cartao-pendente">
+            <div class="cartao-pendente-dados">
+                <span class="uid">{{ cartao.uid|uid_para:eh_admin }}</span>
+                <span>Lido às <strong>{{ cartao.last_seen|date:"H:i:s" }}</strong> ({{ cartao.last_seen|ha_quanto }})</span>
+            </div>
+
+            {% if meus or outros %}
+                <form method="post" action="{% url 'vincular_cartao' %}" class="acao-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="cartao_id" value="{{ cartao.id }}">
+                    <select name="aluno_id" aria-label="Aluno que vai receber o cartão" required>
+                        <option value="">Escolha o aluno…</option>
+                        {% if meus %}
+                            <optgroup label="Meus bolsistas sem cartão">
+                                {% for aluno in meus %}
+                                    <option value="{{ aluno.id }}">{{ aluno.get_full_name|default:aluno.username }} ({{ aluno.email }})</option>
+                                {% endfor %}
+                            </optgroup>
+                        {% endif %}
+                        {% if outros %}
+                            <optgroup label="Outros alunos sem cartão">
+                                {% for aluno in outros %}
+                                    <option value="{{ aluno.id }}">{{ aluno.get_full_name|default:aluno.username }} ({{ aluno.email }})</option>
+                                {% endfor %}
+                            </optgroup>
+                        {% endif %}
+                    </select>
+                    <button type="submit" class="btn btn-primary">Continuar</button>
+                </form>
+            {% else %}
+                <p class="detalhe">
+                    Não há alunos sem cartão. Se o aluno ainda não aparece no portal,
+                    <a href="{% url 'alunos' %}">cadastre-o em Alunos</a> primeiro.
+                </p>
+            {% endif %}
+        </section>
+    {% empty %}
+        <div class="vazio-box">
+            <strong>Nenhum cartão aguardando.</strong>
+            <p>Peça para o aluno aproximar o cartão do leitor da porta. O acesso será negado, e o cartão aparece aqui em seguida.</p>
+        </div>
+    {% endfor %}
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Orientadores</h1>
+    <p class="ajuda">Quem responde pelo acesso de cada aluno, e até quando. Como administrador, você pode ajustar a validade ou retirar qualquer orientação.</p>
+
+    {% regroup orientacoes by orientador as grupos %}
+    {% for grupo in grupos %}
+        <h2>
+            {{ grupo.grouper.get_full_name|default:grupo.grouper.username }}
+            <small class="detalhe">{{ grupo.grouper.email }}</small>
+            {% if not grupo.grouper.is_active %}<span class="selo selo-erro">conta desativada</span>{% endif %}
+        </h2>
+        <div class="tabela-wrap">
+            <table class="tabela tabela-cartoes">
+                <thead>
+                    <tr>
+                        <th>Aluno</th>
+                        <th>Situação da orientação</th>
+                        <th>Válido até</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for orientacao in grupo.list %}
+                    <tr>
+                        <td data-label="Aluno">
+                            <strong>{{ orientacao.aluno.get_full_name|default:orientacao.aluno.username }}</strong>
+                            <small class="detalhe">{{ orientacao.aluno.email }}</small>
+                        </td>
+                        <td data-label="Situação">
+                            {% if orientacao.vigente %}
+                                <span class="selo selo-ok">Em dia</span>
+                            {% elif orientacao.vencida %}
+                                <span class="selo selo-erro">Vencida</span>
+                            {% else %}
+                                <span class="selo selo-erro">Não vale</span>
+                                <small class="detalhe">orientador sem permissão, desativado ou o próprio aluno</small>
+                            {% endif %}
+                        </td>
+                        <td data-label="Válido até">
+                            <form method="post" action="{% url 'renovar_orientacao' orientacao.id %}" class="acao-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.path }}">
+                                <input type="date" name="valido_ate" value="{{ orientacao.valido_ate|date:'Y-m-d' }}" aria-label="Válido até" required>
+                                <button type="submit" class="btn btn-secundario btn-pequeno">Salvar</button>
+                            </form>
+                        </td>
+                        <td data-label="Ações">
+                            <form method="post" action="{% url 'encerrar_orientacao' orientacao.id %}"
+                                  onsubmit="return confirm('Retirar esta orientação de {{ orientacao.aluno.get_full_name|default:orientacao.aluno.username|escapejs }}?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.path }}">
+                                <button type="submit" class="btn btn-danger btn-pequeno">Retirar</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% empty %}
+        <div class="vazio-box">
+            <strong>Nenhuma orientação cadastrada.</strong>
+            <p>As orientações aparecem aqui quando um professor reivindica um aluno.</p>
+        </div>
+    {% endfor %}
+{% endblock %}

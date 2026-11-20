@@ -6,7 +6,6 @@ from django.conf import settings
 from django.contrib.auth.models import Group
 from django.shortcuts import render
 
-from .models import ProfessorProfile
 
 # Domínios institucionais aceitos no login e o grupo que cada um recebe.
 GRUPO_POR_DOMINIO = {
@@ -75,9 +74,6 @@ class MySocialAccountAdapter(DefaultSocialAccountAdapter):
             # Pega o objeto do grupo ou cria se não existir
             group, created = Group.objects.get_or_create(name=group_name)
             user.groups.add(group)
-            # Professores ganham um perfil para poder vincular bolsistas.
-            if group_name == 'Professores':
-                ProfessorProfile.objects.get_or_create(user=user)
 
         if email in settings.ADMIN_EMAILS:
             promover_admin(user)
