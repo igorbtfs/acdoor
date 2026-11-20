@@ -356,6 +356,33 @@ class InterfaceTests(Cenario):
             self.assertNotContains(response, '{#', msg_prefix=pagina)   # comentário de template vazando
             self.assertNotContains(response, '{%', msg_prefix=pagina)
 
+    def test_marca_do_campus_aparece_uma_vez_por_pagina(self):
+        logo = 'core/img/ifrs-campus-restinga-horizontal.png'
+        alt = 'alt="Instituto Federal do Rio Grande do Sul, Campus Restinga"'
+        # na entrada, dentro do cartão (sem rodapé, para não repetir)
+        for pagina in ('/', '/accounts/login/'):
+            response = self.client.get(pagina)
+            self.assertContains(response, logo, count=1, msg_prefix=pagina)
+            self.assertContains(response, alt, msg_prefix=pagina)
+            self.assertContains(response, 'logo-entrada', msg_prefix=pagina)
+            self.assertNotContains(response, '<footer', msg_prefix=pagina)
+        # nas demais, no rodapé
+        self.client.force_login(self.professor)
+        for nome in ('home', 'alunos', 'access_logs'):
+            response = self.client.get(reverse(nome))
+            self.assertContains(response, logo, count=1, msg_prefix=nome)
+            self.assertContains(response, '<footer class="rodape">', msg_prefix=nome)
+
+    def test_arquivo_da_marca_existe_e_e_o_original(self):
+        from django.contrib.staticfiles import finders
+        caminho = finders.find('core/img/ifrs-campus-restinga-horizontal.png')
+        self.assertIsNotNone(caminho)
+        with open(caminho, 'rb') as arquivo:
+            dados = arquivo.read()
+        self.assertEqual(dados[:8], b'\x89PNG\r\n\x1a\n')
+        # proporção original (660x183), a mesma declarada no HTML: a marca não pode ser distorcida
+        self.assertEqual((int.from_bytes(dados[16:20], 'big'), int.from_bytes(dados[20:24], 'big')), (660, 183))
+
     def test_sair_com_um_clique(self):
         self.client.force_login(self.professor)
         pagina = self.client.get('/')

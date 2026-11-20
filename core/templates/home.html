@@ -1,12 +1,15 @@
 {% extends 'base.html' %}
-{% load acdoor %}
+{% load static acdoor %}
 
 {% block titulo %}Início{% endblock %}
 {% block classe_main %}{% if not user.is_authenticated %}estreito{% endif %}{% endblock %}
+{# Na tela de entrada a marca já aparece no cartão; o rodapé a repetiria. #}
+{% block rodape %}{% if user.is_authenticated %}{{ block.super }}{% endif %}{% endblock %}
 
 {% block content %}
     {% if not user.is_authenticated %}
         <div class="entrada">
+            <img src="{% static 'core/img/ifrs-campus-restinga-horizontal.png' %}" width="660" height="183" alt="Instituto Federal do Rio Grande do Sul, Campus Restinga" class="logo-ifrs logo-entrada">
             <h1>AC-Door</h1>
             <p class="entrada-subtitulo">Controle de acesso do laboratório de robótica<br>IFRS Campus Restinga</p>
             <p>Entre para ver a situação do seu acesso ou gerenciar os seus bolsistas.</p>

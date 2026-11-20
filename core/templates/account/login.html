@@ -1,10 +1,15 @@
 {% extends "base.html" %}
 
+{% load static %}
+
 {% block titulo %}Entrar{% endblock %}
+{# A marca já aparece no cartão de entrada; o rodapé a repetiria. #}
+{% block rodape %}{% endblock %}
 {% block classe_main %}estreito{% endblock %}
 
 {% block content %}
 <div class="entrada">
+    <img src="{% static 'core/img/ifrs-campus-restinga-horizontal.png' %}" width="660" height="183" alt="Instituto Federal do Rio Grande do Sul, Campus Restinga" class="logo-ifrs logo-entrada">
     <h1>Entrar no AC-Door</h1>
     <p>Controle de acesso do laboratório de robótica do IFRS Campus Restinga.</p>
 
